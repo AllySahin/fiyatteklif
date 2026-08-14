@@ -1,6 +1,35 @@
 # 🚀 VPS Deployment Rehberi
 
-## ⚡ Hızlı Kurulum (5 Dakika)
+## ⚡ Güncelleme Senaryosu (Sizin İçin - 10 Saniye)
+
+**Proje zaten clone edilmiş ve .env var ise:**
+
+```bash
+cd fiyatteklif
+
+# 1. Son kodları çek
+git pull
+
+# 2. Dependencies güncelle
+npm install --production
+
+# 3. Frontend'i yeniden build et
+npm run build
+
+# 4. Mail server'ı yeniden başlat
+pm2 restart ecosystem.config.cjs
+# VEYA
+pm2 restart vefa-mail-server
+```
+
+**DAHA KOLAY: Tek komutla tümü** 👇
+```bash
+./deploy.sh
+```
+
+---
+
+## 📋 İlk Kurulum (Bir Kerelik - Sadece İlk Defa)
 
 ### 1. VPS'e Bağlan
 ```bash
@@ -21,7 +50,6 @@ cd fiyatteklif
 
 ### 4. .env Dosyasını Oluştur
 ```bash
-# Yerel .env dosyanızı kopyalayın veya elle oluşturun:
 nano .env
 ```
 
@@ -38,14 +66,18 @@ npm run build
 # Mail server'ı başlat
 pm2 start ecosystem.config.cjs
 
-# Sistem başlangıcında otomatik başlat (bir kerelik)
+# Sistem başlangıcında otomatik başlat (BİR KERELİK!)
 pm2 startup
 # ↑ Bu komut size bir sudo komutu verecek, onu çalıştırın
+
+# PM2 listesini kaydet (BİR KERELİK!)
 pm2 save
 
 # Deploy script'i çalıştırılabilir yap
 chmod +x deploy.sh
 ```
+
+**Not:** `pm2 startup` ve `pm2 save` komutlarını sadece ilk kurulumda çalıştırın!
 
 ### 7. Nginx Kurulumu (Frontend için)
 ```bash

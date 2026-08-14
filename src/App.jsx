@@ -349,7 +349,11 @@ export default function App() {
     // Müşteriye tanıtım maili gönder
     if (newCust.email) {
       try {
-        const response = await fetch('http://localhost:8787/api/send-welcome-email', {
+        // Production: use Nginx proxy (/api/), Development: use port 8787
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const apiUrl = isLocalhost ? 'http://localhost:8787/api/send-welcome-email' : '/api/send-welcome-email';
+        
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -301,7 +301,13 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
     try {
       const fileName = quoteData?.pdfFileName || `Teklif_${quoteId}_${getCompanySlug()}.pdf`;
       const pdfBase64 = quoteData?.pdfBase64 || await generatePdfBase64ForCurrentQuote();
-      const apiBase = String(currentUser?.smtpApiBaseUrl || `${window.location.protocol}//${window.location.hostname}:8787`).replace(/\/$/, '');
+      
+      // Production: use Nginx proxy (/api/), Development: use port 8787
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const apiBase = String(
+        currentUser?.smtpApiBaseUrl || 
+        (isLocalhost ? `${window.location.protocol}//${window.location.hostname}:8787` : window.location.origin)
+      ).replace(/\/$/, '');
 
       const payload = {
         to: mailTo.trim(),
