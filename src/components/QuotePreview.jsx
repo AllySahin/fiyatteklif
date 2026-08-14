@@ -183,7 +183,14 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
       width: exportRoot.scrollWidth,
       height: exportRoot.scrollHeight,
       backgroundColor: '#ffffff',
-      useCORS: true
+      skipFonts: true,
+      filter: (node) => {
+        // Skip external stylesheets to avoid CORS issues
+        if (node.tagName === 'LINK' && node.rel === 'stylesheet' && node.href && node.href.includes('googleapis')) {
+          return false;
+        }
+        return true;
+      }
     });
 
     document.body.removeChild(hiddenHost);
@@ -268,7 +275,8 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
       URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error('PDF indirme hatası:', err);
-      alert('PDF oluşturulamadı. Lütfen tekrar deneyin.');
+      const errorDetail = err?.message || err?.toString() || 'Detay yok';
+      alert(`PDF oluşturulamadı.\n\nHata: ${errorDetail}\n\nKonsolda daha fazla detay var (F12)`);
     } finally {
       setIsExporting(false);
     }
@@ -345,7 +353,8 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
       setShowMailModal(false);
     } catch (err) {
       console.error('SMTP mail gonderim hatasi:', err);
-      alert(`Mail gonderilemedi: ${err.message || 'Bilinmeyen hata'}`);
+      const errorDetail = err?.message || err?.toString() || JSON.stringify(err);
+      alert(`Mail gönderilemedi.\n\nHata: ${errorDetail}\n\nMail server çalışıyor mu? Konsolu kontrol edin (F12)`);
     } finally {
       setIsSendingMail(false);
     }
@@ -364,7 +373,8 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
       });
     } catch (err) {
       console.error('Teklif kaydetme hatasi:', err);
-      alert(`Teklif kaydedilemedi: ${err.message || 'Bilinmeyen hata'}`);
+      const errorDetail = err?.message || err?.toString() || JSON.stringify(err);
+      alert(`Teklif kaydedilemedi.\n\nHata: ${errorDetail}\n\nKonsolda daha fazla detay var (F12)`);
     } finally {
       setIsSavingQuote(false);
     }
@@ -451,7 +461,7 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
               <div style={{ minHeight: '297mm', boxSizing: 'border-box' }}>
                 <div className="border-b border-slate-200 pb-2">
                   <img
-                    src="/fiyat-teklif-header.png"
+                    src="/teklif/fiyat-teklif-header.png"
                     alt="Vefa Fiyat Teklif Header"
                     crossOrigin="anonymous"
                     className="w-full h-auto"
@@ -504,7 +514,7 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
               <div style={{ minHeight: '297mm', boxSizing: 'border-box' }}>
                 <div className="border-b border-slate-200 pb-2">
                   <img
-                    src="/fiyat-teklif-header.png"
+                    src="/teklif/fiyat-teklif-header.png"
                     alt="Vefa Fiyat Teklif Header"
                     crossOrigin="anonymous"
                     className="w-full h-auto"
@@ -585,7 +595,7 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
                 <div className="flex justify-end pt-3">
                   <div className="flex items-center justify-center" style={{ width: '17.6rem', height: '8.8rem' }}>
                     <img
-                      src="/kase.png"
+                      src="/teklif/kase.png"
                       alt="Kaşe ve imza"
                       crossOrigin="anonymous"
                       className="max-w-full max-h-full object-contain"
@@ -599,7 +609,7 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
             <>
               <div className="border-b border-slate-200 pb-2">
                 <img
-                  src="/fiyat-teklif-header.png"
+                  src="/teklif/fiyat-teklif-header.png"
                   alt="Vefa Fiyat Teklif Header"
                   crossOrigin="anonymous"
                   className="w-full h-auto"
@@ -725,7 +735,7 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
               <div className="flex justify-end pt-2">
                 <div className="flex items-center justify-center" style={{ width: '17.6rem', height: '8.8rem' }}>
                   <img
-                    src="/kase.png"
+                    src="/teklif/kase.png"
                     alt="Kaşe ve imza"
                     crossOrigin="anonymous"
                     className="max-w-full max-h-full object-contain"
@@ -736,18 +746,6 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
             </>
           )}
         </div>
-      </div>
-
-      {/* Save Quote Action Bar */}
-      <div className="fixed bottom-44 left-0 right-0 max-w-md mx-auto bg-white p-4 shadow-xl z-40 border-t border-slate-200 no-print">
-        <button
-          onClick={handleSaveQuoteWithPdf}
-          disabled={isSavingQuote}
-          className="w-full bg-[#1b365d] hover:bg-[#142847] text-white py-3.5 rounded-xl font-bold text-base shadow-md flex items-center justify-center gap-2 active-tap"
-        >
-          <CheckCircle size={20} className="text-amber-400" />
-          <span>{isSavingQuote ? 'Kaydediliyor...' : 'Teklifi Kaydet ve Tamamla'}</span>
-        </button>
       </div>
 
       {/* Terms & Conditions Edit Modal */}

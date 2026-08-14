@@ -298,15 +298,15 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
                           {!hasChildren && sel && (
                             <div className="flex items-center gap-1 mt-1 shrink-0">
                               <button
-                                onClick={() => onToggleItem({ ...item, qty: (sel.qty ?? 1) - 1 })}
+                                onClick={() => onToggleItem({ ...item, qty: (sel.quantity ?? 1) - 1 })}
                                 className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center active-tap"
-                                disabled={(sel.qty ?? 1) <= 1}
+                                disabled={(sel.quantity ?? 1) <= 1}
                               >
                                 <Minus size={13} className="text-slate-500" />
                               </button>
-                              <span className="w-6 text-center text-sm font-bold text-[#1b365d]">{sel.qty ?? 1}</span>
+                              <span className="w-6 text-center text-sm font-bold text-[#1b365d]">{sel.quantity ?? 1}</span>
                               <button
-                                onClick={() => onToggleItem({ ...item, qty: (sel.qty ?? 1) + 1 })}
+                                onClick={() => onToggleItem({ ...item, qty: (sel.quantity ?? 1) + 1 })}
                                 className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center active-tap"
                               >
                                 <Plus size={13} className="text-slate-500" />
@@ -387,15 +387,15 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
                                   {childSel && (
                                     <div className="flex items-center gap-1 mt-1 shrink-0">
                                       <button
-                                        onClick={() => onToggleItem({ ...child, qty: (childSel.qty ?? 1) - 1 })}
+                                        onClick={() => onToggleItem({ ...child, qty: (childSel.quantity ?? 1) - 1 })}
                                         className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center active-tap"
-                                        disabled={(childSel.qty ?? 1) <= 1}
+                                        disabled={(childSel.quantity ?? 1) <= 1}
                                       >
                                         <Minus size={13} className="text-slate-500" />
                                       </button>
-                                      <span className="w-6 text-center text-sm font-bold text-[#1b365d]">{childSel.qty ?? 1}</span>
+                                      <span className="w-6 text-center text-sm font-bold text-[#1b365d]">{childSel.quantity ?? 1}</span>
                                       <button
-                                        onClick={() => onToggleItem({ ...child, qty: (childSel.qty ?? 1) + 1 })}
+                                        onClick={() => onToggleItem({ ...child, qty: (childSel.quantity ?? 1) + 1 })}
                                         className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center active-tap"
                                       >
                                         <Plus size={13} className="text-slate-500" />

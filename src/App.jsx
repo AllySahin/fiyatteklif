@@ -30,6 +30,10 @@ export default function App() {
       if (seen.has(id)) return false;
       seen.add(id);
       return true;
+    }).map((quote) => {
+      // Remove PDF data to save localStorage space (PDFs can be regenerated)
+      const { pdfBase64, ...quoteWithoutPdf } = quote;
+      return quoteWithoutPdf;
     });
   };
 
@@ -104,7 +108,22 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    localStorage.setItem('teklifpro_quotes', JSON.stringify(quotes));
+    // Remove PDF data before saving to prevent localStorage quota issues
+    const quotesWithoutPdf = quotes.map(({ pdfBase64, ...quote }) => quote);
+    try {
+      localStorage.setItem('teklifpro_quotes', JSON.stringify(quotesWithoutPdf));
+    } catch (err) {
+      console.error('localStorage quota exceeded:', err);
+      // If still fails, keep only last 50 quotes
+      const recentQuotes = quotesWithoutPdf.slice(0, 50);
+      try {
+        localStorage.setItem('teklifpro_quotes', JSON.stringify(recentQuotes));
+        alert('Eski teklifler otomatik temizlendi (son 50 teklif saklandı).');
+      } catch (err2) {
+        console.error('localStorage still full after cleanup:', err2);
+        alert('localStorage dolu! Lütfen tarayıcı ayarlarından önbelleği temizleyin.');
+      }
+    }
   }, [quotes]);
 
   useEffect(() => {
@@ -171,14 +190,32 @@ export default function App() {
 
   const handleToggleItem = (item) => {
     setWizardSelectedItems(prev => {
-      const exists = prev.some(i => i.id === item.id);
-      if (exists) {
+      const existingIndex = prev.findIndex(i => i.id === item.id);
+      
+      if (existingIndex >= 0) {
+        // Item already exists
+        const existing = prev[existingIndex];
+        
+        // If qty parameter is provided, update quantity
+        if (item.qty !== undefined) {
+          if (item.qty <= 0) {
+            // Remove item if quantity is 0 or less
+            return prev.filter(i => i.id !== item.id);
+          }
+          // Update quantity
+          return prev.map((i, idx) => 
+            idx === existingIndex ? { ...i, quantity: item.qty } : i
+          );
+        }
+        
+        // No qty parameter, toggle off (remove)
         return prev.filter(i => i.id !== item.id);
       } else {
+        // Item doesn't exist, add it
         return [...prev, {
           ...item,
           customPrice: item.basePrice,
-          quantity: 1
+          quantity: item.qty ?? 1
         }];
       }
     });
@@ -251,7 +288,7 @@ export default function App() {
       const quoteToSave = {
         ...selectedQuoteForPreview,
         totalAmount: finalTotal,
-        pdfBase64: savedQuoteData?.pdfBase64 || selectedQuoteForPreview.pdfBase64 || '',
+        // Don't save PDF to localStorage (can be regenerated, saves storage space)
         pdfFileName: savedQuoteData?.pdfFileName || selectedQuoteForPreview.pdfFileName || `Teklif_${selectedQuoteForPreview.id}.pdf`
       };
       setQuotes(prev => [quoteToSave, ...prev.filter((q) => q.id !== quoteToSave.id)]);
