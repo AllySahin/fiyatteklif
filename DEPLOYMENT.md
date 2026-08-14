@@ -1,45 +1,31 @@
 # 🚀 VPS Deployment Rehberi
 
-## İlk Kurulum (Bir Kerelik)
+## ⚡ Hızlı Kurulum (5 Dakika)
 
-### 1. VPS'e Bağlanın
+### 1. VPS'e Bağlan
 ```bash
 ssh user@your-vps-ip
 ```
 
-### 2. Node.js ve PM2 Kurulumu
+### 2. PM2 Kur (Yoksa)
 ```bash
-# Node.js 18+ kur (Ubuntu/Debian için)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# PM2 global kur
 sudo npm install -g pm2
 ```
 
-### 3. Projeyi Clone Edin
+### 3. Projeyi Clone Et
 ```bash
-cd /var/www
-sudo git clone https://github.com/YOUR_USERNAME/fiyatteklif.git
+cd /var/www  # veya istediğiniz dizin
+git clone https://github.com/YOUR_USERNAME/fiyatteklif.git
 cd fiyatteklif
 ```
 
-### 4. Environment Variables Oluşturun
+### 4. .env Dosyasını Oluştur
 ```bash
+# Yerel .env dosyanızı kopyalayın veya elle oluşturun:
 nano .env
 ```
 
-İçeriği yapıştırın:
-```
-MAIL_SERVER_PORT=8787
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-EMAIL_ADDRESS=alpaslan@vefaegitimkurumlari.com
-EMAIL_PASSWORD=zlhs jsbc quxo angb
-EMAIL_FROM=alpaslan@vefaegitimkurumlari.com
-```
-
-Kaydet: `Ctrl+O`, `Enter`, `Ctrl+X`
+Mevcut `.env` içeriğinizi yapıştırın ve kaydedin (`Ctrl+O`, `Enter`, `Ctrl+X`)
 
 ### 5. İlk Deployment
 ```bash
@@ -52,13 +38,12 @@ npm run build
 # Mail server'ı başlat
 pm2 start ecosystem.config.cjs
 
-# Sistem başlangıcında otomatik başlat
+# Sistem başlangıcında otomatik başlat (bir kerelik)
 pm2 startup
+# ↑ Bu komut size bir sudo komutu verecek, onu çalıştırın
 pm2 save
-```
 
-### 6. Deploy Script'e İzin Ver
-```bash
+# Deploy script'i çalıştırılabilir yap
 chmod +x deploy.sh
 ```
 
