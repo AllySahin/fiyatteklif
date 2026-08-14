@@ -7,9 +7,9 @@ echo "🚀 Deployment başlıyor..."
 echo "📥 Kodlar güncelleniyor..."
 git pull origin main
 
-# Dependencies install
+# Dependencies install (includes devDependencies for Vite build)
 echo "📦 Bağımlılıklar yükleniyor..."
-npm install --production
+npm install
 
 # Frontend build
 echo "🔨 Frontend build ediliyor..."
