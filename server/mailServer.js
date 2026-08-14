@@ -3,18 +3,28 @@ import cors from 'cors';
 import nodemailer from 'nodemailer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load environment variables from .env file in parent directory
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const app = express();
 const PORT = Number(process.env.MAIL_SERVER_PORT || 8787);
 const SMTP_HOST = process.env.SMTP_SERVER || 'smtp.gmail.com';
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_USER = process.env.EMAIL_ADDRESS || 'alpaslan@vefaegitimkurumlari.com';
-const SMTP_PASS = String(process.env.EMAIL_PASSWORD || 'zlhs jsbc quxo angb').replace(/\s+/g, '');
+const SMTP_USER = process.env.EMAIL_ADDRESS;
+const SMTP_PASS = process.env.EMAIL_PASSWORD;
 const SMTP_SECURE = SMTP_PORT === 465;
 const SMTP_FROM = process.env.EMAIL_FROM || SMTP_USER;
+
+// Validate required environment variables
+if (!SMTP_USER || !SMTP_PASS) {
+  console.error('ERROR: EMAIL_ADDRESS and EMAIL_PASSWORD must be set in .env file');
+  process.exit(1);
+}
 
 const createTransportConfigs = () => {
   const primary = {
