@@ -134,7 +134,7 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
   };
 
   const defaultMailSubject = `Fiyat Teklifi - ${quoteId} - ${customer.companyName}`;
-  const defaultMailBody = `Sayın Yetkili (${customer.authorizedPerson || customer.companyName}),\n\nİhtiyaç duyduğunuz belgelere ait ${quoteId} numaralı fiyat teklifimiz hazırlanmıştır.\n\nGENEL TOPLAM (KDV DAHİL): ${formatTL(grandTotalWithTax)}\nGeçerlilik Tarihi: ${validUntil}\nTeklifi Düzenleyen: ${issuerName} - ${issuerPhone}\n\nDetaylı teklif formu ve evrak listesi belgede yer almaktadır.\n\nSaygılarımızla,\nVefa İş Makineleri & Lonca Belgelendirme`;
+  const defaultMailBody = `Sayın Yetkili (${customer.authorizedPerson || customer.companyName}),\n\nİhtiyaç duyduğunuz belgelere ait ${quoteId} numaralı fiyat teklifimiz hazırlanmıştır.\n\nGENEL TOPLAM (KDV DAHİL): ${formatTL(grandTotalWithTax)}\nGeçerlilik Tarihi: ${validUntil}\nTeklifi Düzenleyen: ${issuerName} - ${issuerPhone}\n\nDetaylı teklif formu ve evrak listesi belgede yer almaktadır.\n\nSaygılarımızla,\nVEFA EĞİTİM KURUMLARI`;
   const [mailTo, setMailTo] = useState(customer.email || '');
   const [mailSubjectInput, setMailSubjectInput] = useState(defaultMailSubject);
   const [mailBodyInput, setMailBodyInput] = useState(defaultMailBody);
