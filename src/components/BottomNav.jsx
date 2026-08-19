@@ -1,10 +1,11 @@
 import React from 'react';
-import { Home, PlusCircle, Users, ClipboardList, BookOpen, User } from 'lucide-react';
+import { Home, PlusCircle, Users, ClipboardList, BookOpen, User, CheckSquare } from 'lucide-react';
 
 export default function BottomNav({ activeTab, setActiveTab, onStartNewQuote }) {
   const navItems = [
     { id: 'dashboard', label: 'Ana Sayfa', icon: Home },
     { id: 'new_quote', label: 'Yeni Teklif', icon: PlusCircle, action: onStartNewQuote },
+    { id: 'tasks', label: 'Görevler', icon: CheckSquare },
     { id: 'customers', label: 'Müşteriler', icon: Users },
     { id: 'notes', label: 'Notlar', icon: ClipboardList },
     { id: 'catalog', label: 'Katalog', icon: BookOpen },

@@ -1,8 +1,31 @@
-import React, { useState } from 'react';
-import { FileText, Plus, PhoneCall, StickyNote, ArrowRight, Bell, AlertCircle, Clock, Check, Archive, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Plus, PhoneCall, StickyNote, ArrowRight, Bell, AlertCircle, Clock, Check, Archive, ChevronDown, CheckSquare, Calendar } from 'lucide-react';
 
 export default function Dashboard({ quotes, notes = [], currentUser, onStartNewQuote, onSelectQuote, onViewAllQuotes, onOpenQuickNote, onOpenProfile, onUpdateNoteStatus, onArchiveNote }) {
   const [expandedNoteId, setExpandedNoteId] = useState(null);
+  const [myTasks, setMyTasks] = useState([]);
+  
+  // Kullanıcının görevlerini getir
+  useEffect(() => {
+    const fetchMyTasks = async () => {
+      if (!currentUser?.id) return;
+      
+      try {
+        const response = await fetch(`/api/tasks/user/${currentUser.id}`);
+        const data = await response.json();
+        if (data.ok) {
+          // Sadece tamamlanmamış görevleri göster
+          const activeTasks = data.data.filter(task => task.Status !== 'Tamamlandı' && task.Status !== 'İptal');
+          setMyTasks(activeTasks.slice(0, 5)); // İlk 5 görev
+        }
+      } catch (error) {
+        console.error('Görevler yüklenemedi:', error);
+      }
+    };
+
+    fetchMyTasks();
+  }, [currentUser]);
+  
   // Compute dynamic stats
   const now = new Date();
   const visitedCompaniesThisMonth = new Set(
@@ -202,6 +225,106 @@ export default function Dashboard({ quotes, notes = [], currentUser, onStartNewQ
                       </button>
                     </div>
                   )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* BENİM GÖREVLERİM */}
+      {myTasks.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <CheckSquare size={18} className="text-[#1b365d]" />
+            <h3 className="text-base font-bold text-slate-800">Benim Görevlerim</h3>
+            <span className="bg-[#1b365d] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+              {myTasks.length}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {myTasks.map((task) => {
+              // Task priority colors
+              let priorityBg, priorityText, priorityBorder;
+              switch (task.Priority) {
+                case 'Acil':
+                  priorityBg = 'bg-red-50';
+                  priorityText = 'text-red-700';
+                  priorityBorder = 'border-red-200';
+                  break;
+                case 'Yüksek':
+                  priorityBg = 'bg-orange-50';
+                  priorityText = 'text-orange-700';
+                  priorityBorder = 'border-orange-200';
+                  break;
+                case 'Orta':
+                  priorityBg = 'bg-yellow-50';
+                  priorityText = 'text-yellow-700';
+                  priorityBorder = 'border-yellow-200';
+                  break;
+                default:
+                  priorityBg = 'bg-green-50';
+                  priorityText = 'text-green-700';
+                  priorityBorder = 'border-green-200';
+              }
+
+              // Task status colors
+              let statusBg, statusText;
+              switch (task.Status) {
+                case 'Devam Ediyor':
+                  statusBg = 'bg-blue-100';
+                  statusText = 'text-blue-700';
+                  break;
+                case 'Bekliyor':
+                  statusBg = 'bg-yellow-100';
+                  statusText = 'text-yellow-700';
+                  break;
+                default:
+                  statusBg = 'bg-slate-100';
+                  statusText = 'text-slate-700';
+              }
+
+              return (
+                <div
+                  key={task.TaskId}
+                  className={`${priorityBg} ${priorityBorder} border-l-4 rounded-lg shadow-sm hover:shadow-md transition-all bg-white`}
+                >
+                  <div className="p-3">
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <h4 className="font-bold text-slate-800 text-sm flex-1">
+                        {task.Title}
+                      </h4>
+                      <div className="flex gap-1.5 flex-shrink-0">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${priorityBg} ${priorityText}`}>
+                          {task.Priority}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${statusBg} ${statusText}`}>
+                          {task.Status}
+                        </span>
+                      </div>
+                    </div>
+
+                    {task.Description && (
+                      <p className="text-xs text-slate-600 mb-2 line-clamp-2 leading-relaxed">
+                        {task.Description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between text-[10px] text-slate-500">
+                      {task.DueDate && (
+                        <div className="flex items-center gap-1">
+                          <Calendar size={12} />
+                          <span>{new Date(task.DueDate).toLocaleDateString('tr-TR')}</span>
+                        </div>
+                      )}
+                      {task.CreatedByUserName && (
+                        <span className="text-slate-400">
+                          {task.CreatedByUserName}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             })}

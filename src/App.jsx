@@ -12,6 +12,7 @@ import LoginScreen from './components/LoginScreen';
 import BottomNav from './components/BottomNav';
 import QuickNoteModal from './components/QuickNoteModal';
 import QuotesArchive from './components/QuotesArchive';
+import TaskManagement from './components/TaskManagement';
 
 import { INITIAL_CATALOG } from './data/catalogData';
 import { MOCK_QUOTES, MOCK_CUSTOMERS, MOCK_NOTES } from './data/mockData';
@@ -443,6 +444,15 @@ export default function App() {
             onArchiveNote={handleArchiveNote}
             onOpenNewNoteModal={() => setShowQuickNoteModal(true)}
             onStartQuoteForCustomer={handleStartQuoteForCustomer}
+          />
+        )}
+
+        {activeTab === 'tasks' && (
+          <TaskManagement
+            currentUser={currentUser}
+            allUsers={PRESET_USERS}
+            customers={customers}
+            quotes={quotes}
           />
         )}
 

@@ -4,6 +4,8 @@ import nodemailer from 'nodemailer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import apiRoutes from './routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +83,23 @@ const sendWithFallback = async (mailOptions) => {
 
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
+
+// API routes
+app.use('/api', apiRoutes);
+
+// Production'da static files serve et
+const distPath = path.join(__dirname, '..', 'dist');
+if (fs.existsSync(distPath)) {
+  console.log('Production mode: Serving static files from dist/');
+  
+  // Static files
+  app.use('/teklif', express.static(distPath));
+  
+  // SPA routing için fallback - / ile başlayanlar
+  app.get('/teklif', (_req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'mail-server' });
@@ -168,7 +187,7 @@ app.post('/api/send-welcome-email', async (req, res) => {
         <div class="service-item">
           <span class="service-icon">✓</span>
           <strong>MEB Onaylı İş Makineleri Operatörlük Eğitimi</strong>
-          <p style="margin: 5px 0 0 25px; color: #666; font-size: 14px;">Forklift, Ekskavatör, Beko Loder, Vinç, Greyder ve daha fazlası</p>
+          <p style="margin: 5px 0 0 25px; color: #666; font-size: 14px;">Forklift, Manlift, Ekskavatör, Beko Loder, Köprülü Vinç, ve daha fazlası</p>
         </div>
         
         <div class="service-item">
@@ -217,7 +236,7 @@ Firmamızla iletişime geçtiğiniz için teşekkür ederiz. VEFA Eğitim Kuruml
 HİZMETLERİMİZ:
 
 ✓ MEB Onaylı İş Makineleri Operatörlük Eğitimi
-  (Forklift, Ekskavatör, Beko Loder, Vinç, Greyder vb.)
+  (Forklift, Manlift, Ekskavatör, Beko Loder, Köprülü Vinç, vb.)
 
 ✓ MYK Mesleki Yeterlilik Belgelendirme
   (113 Ana Meslek ve 190 Alt Meslek Kolu)
