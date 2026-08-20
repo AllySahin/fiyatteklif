@@ -1,0 +1,27 @@
+{
+  "name": "TeklifPro - VEFA Eğitim Kurumları",
+  "short_name": "TeklifPro",
+  "description": "İş Makineleri & MYK Mobil Fiyat Teklifi Sistemi",
+  "start_url": "/teklif/",
+  "scope": "/teklif/",
+  "display": "standalone",
+  "background_color": "#1b365d",
+  "theme_color": "#1b365d",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/teklif/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/teklif/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "tr"
+}
