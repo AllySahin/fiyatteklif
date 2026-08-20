@@ -365,11 +365,17 @@ export default function App() {
         
         if (response.ok) {
           console.log('Tanıtım maili gönderildi:', newCust.email);
+          alert(`✅ Müşteri kaydedildi!\n\nTanıtım maili ${newCust.email} adresine başarıyla gönderildi.`);
+        } else {
+          alert(`⚠️ Müşteri kaydedildi ancak tanıtım maili gönderilemedi.\n\nMüşteri: ${newCust.companyName}\nE-posta: ${newCust.email}`);
         }
       } catch (error) {
         console.error('Tanıtım maili gönderilemedi:', error);
-        // Hata olsa bile müşteri ekleme devam eder
+        alert(`⚠️ Müşteri kaydedildi ancak tanıtım maili gönderilemedi.\n\nHata: ${error.message || 'Bağlantı hatası'}`);
       }
+    } else {
+      // E-posta yoksa sadece müşteri eklendi bildirimi
+      alert(`✅ Müşteri başarıyla kaydedildi!\n\n${newCust.companyName}`);
     }
   };
 
