@@ -8,10 +8,24 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
   const [openParents, setOpenParents] = useState({}); // For parent item accordion
   const [editingId, setEditingId] = useState(null);
   const [editVal, setEditVal] = useState('');
+  
+  // Manuel ürün ekleme state'leri
+  const [showManualAddModal, setShowManualAddModal] = useState(false);
+  const [manualItemName, setManualItemName] = useState('');
+  const [manualDocumentNumber, setManualDocumentNumber] = useState('');
+  const [manualItemPrice, setManualItemPrice] = useState('');
+  const [manualParentCategory, setManualParentCategory] = useState('');
+  const [manualNewParentCategory, setManualNewParentCategory] = useState('');
+  const [manualSubcategoryInput, setManualSubcategoryInput] = useState('');
+  const [manualSubcategories, setManualSubcategories] = useState([]);
 
   const subcats = category === 'ismakineleri'
     ? IS_MAKINESI_SUBCATS
     : [...SUBCATEGORIES, ...POLY_SUBCATEGORIES].filter(s => s.cat === category);
+  const existingParentOptions = catalog
+    .filter(item => item.category === category && item.isParent)
+    .filter((item, index, list) => list.findIndex(candidate => candidate.title === item.title) === index)
+    .map(item => ({ id: item.id, name: item.title, code: item.code }));
 
   // Group items: separate parents, children, and standalone
   const grouped = useMemo(() => {
@@ -108,6 +122,69 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
     setEditVal(String(item.price ?? item.basePrice));
   };
 
+  const handleManualAdd = () => {
+    const isWorkMachine = category === 'ismakineleri';
+    const selectedParent = existingParentOptions.find(item => item.id === manualParentCategory);
+    const parentTitle = selectedParent?.name || manualNewParentCategory.trim();
+
+    if (!manualItemName.trim() || !manualItemPrice.trim()) {
+      alert('Lütfen isim ve fiyat girin.');
+      return;
+    }
+
+    if (!isWorkMachine && (!manualDocumentNumber.trim() || !parentTitle)) {
+      alert('Lütfen isim, belge numarası, üst kategori ve fiyat girin.');
+      return;
+    }
+
+    const price = parseFloat(manualItemPrice);
+    if (isNaN(price) || price <= 0) {
+      alert('Geçerli bir fiyat girin.');
+      return;
+    }
+
+    const manualItem = {
+      id: `manual-${Date.now()}`,
+      code: isWorkMachine ? `MANUEL-${Date.now().toString().slice(-6)}` : manualDocumentNumber.trim(),
+      title: manualItemName.trim(),
+      basePrice: price,
+      price: price,
+      quantity: 1,
+      category: category,
+      subcategory: 'manuel',
+      ...(isWorkMachine ? {} : {
+        documentNumber: manualDocumentNumber.trim(),
+        subcategories: manualSubcategories,
+        categoryName: parentTitle,
+        parentCategory: parentTitle,
+        parentCode: selectedParent?.code || manualDocumentNumber.trim(),
+        unitCode: manualSubcategories.join(', ') || null,
+        isParent: manualSubcategories.length === 0,
+        isChild: manualSubcategories.length > 0
+      }),
+      isManual: true
+    };
+
+    onToggleItem(manualItem);
+
+    // Form'u sıfırla
+    setManualItemName('');
+    setManualDocumentNumber('');
+    setManualItemPrice('');
+    setManualParentCategory('');
+    setManualNewParentCategory('');
+    setManualSubcategoryInput('');
+    setManualSubcategories([]);
+    setShowManualAddModal(false);
+  };
+
+  const addManualSubcategory = () => {
+    const value = manualSubcategoryInput.trim();
+    if (!value || manualSubcategories.includes(value)) return;
+    setManualSubcategories(prev => [...prev, value]);
+    setManualSubcategoryInput('');
+  };
+
   const commitEdit = (item) => {
     const v = parseInt(editVal, 10);
     if (!isNaN(v) && v > 0) onUpdateItemPrice(item.id, v);
@@ -134,6 +211,13 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
               {selectedCount} kalem
             </span>
           )}
+          <button 
+            onClick={() => setShowManualAddModal(true)}
+            className="p-2 bg-[#ff6b00] hover:bg-[#e05e00] rounded-lg active-tap"
+            title="Manuel Hizmet Ekle"
+          >
+            <Plus size={20} strokeWidth={2.5} className="text-white" />
+          </button>
         </div>
 
         {/* Search Bar */}
@@ -436,6 +520,152 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
           >
             {selectedCount} Kalem Seçildi — Teklifi Hazırla →
           </button>
+        </div>
+      )}
+
+      {/* ── Manuel Hizmet Ekleme Modalı ───────────────────────────────── */}
+      {showManualAddModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-[#1b365d]">
+                {category === 'myk' ? 'Manuel MYK Hizmeti Ekle' : 'Manuel İş Makinesi Ekle'}
+              </h2>
+              <button onClick={() => setShowManualAddModal(false)} className="p-1 text-slate-400 hover:text-slate-600 active-tap">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">
+                  {category === 'myk' ? 'İsim' : 'İş Makinesi Adı'}
+                </label>
+                <input
+                  type="text"
+                  value={manualItemName}
+                  onChange={(e) => setManualItemName(e.target.value)}
+                  placeholder="Örn: Çelik Kaynakçısı"
+                  className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b00]"
+                  autoFocus
+                />
+              </div>
+
+              {category === 'myk' && (
+                <>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Belge Numarası</label>
+                <input
+                  type="text"
+                  value={manualDocumentNumber}
+                  onChange={(e) => setManualDocumentNumber(e.target.value)}
+                  placeholder="Örn: 11UY0010-3/04"
+                  className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b00]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Üst Kategori</label>
+                <select
+                  value={manualParentCategory}
+                  onChange={(e) => {
+                    setManualParentCategory(e.target.value);
+                    if (e.target.value !== '__new__') setManualNewParentCategory('');
+                  }}
+                  className="w-full border border-slate-300 rounded-lg p-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#ff6b00]"
+                >
+                  <option value="">Üst kategori seçin</option>
+                  {existingParentOptions.map(parent => (
+                    <option key={parent.id} value={parent.id}>{parent.name}</option>
+                  ))}
+                  <option value="__new__">+ Yeni üst kategori ekle</option>
+                </select>
+
+                {manualParentCategory === '__new__' && (
+                  <input
+                    type="text"
+                    value={manualNewParentCategory}
+                    onChange={(e) => setManualNewParentCategory(e.target.value)}
+                    placeholder="Yeni üst kategori adı"
+                    className="w-full mt-2 border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b00]"
+                    autoFocus
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Alt Kategoriler <span className="font-normal text-slate-400">(varsa, birden fazla eklenebilir)</span></label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={manualSubcategoryInput}
+                    onChange={(e) => setManualSubcategoryInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addManualSubcategory();
+                      }
+                    }}
+                    placeholder="Örn: B1 - Elektrotla Ark Kaynağı"
+                    className="flex-1 min-w-0 border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b00]"
+                  />
+                  <button
+                    type="button"
+                    onClick={addManualSubcategory}
+                    className="px-3 bg-[#1b365d] text-white rounded-lg font-bold text-sm active-tap"
+                    title="Alt kategori ekle"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+                {manualSubcategories.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {manualSubcategories.map((subcategory, index) => (
+                      <span key={`${subcategory}-${index}`} className="inline-flex items-center gap-1 bg-blue-50 text-[#1b365d] border border-blue-100 rounded-full px-2.5 py-1 text-xs font-semibold">
+                        {subcategory}
+                        <button
+                          type="button"
+                          onClick={() => setManualSubcategories(prev => prev.filter((_, itemIndex) => itemIndex !== index))}
+                          className="text-slate-400 hover:text-red-500 active-tap"
+                          aria-label={`${subcategory} alt kategorisini kaldır`}
+                        >
+                          <X size={13} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Fiyat (TL)</label>
+                <input
+                  type="number"
+                  value={manualItemPrice}
+                  onChange={(e) => setManualItemPrice(e.target.value)}
+                  placeholder="0"
+                  className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b00]"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={() => setShowManualAddModal(false)}
+                className="flex-1 py-3 border border-slate-300 rounded-xl font-bold text-sm text-slate-700 active-tap"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleManualAdd}
+                className="flex-1 py-3 bg-[#ff6b00] text-white rounded-xl font-bold text-sm shadow active-tap"
+              >
+                Ekle
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

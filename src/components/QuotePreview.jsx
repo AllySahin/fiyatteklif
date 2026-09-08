@@ -138,6 +138,7 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
   const [mailTo, setMailTo] = useState(customer.email || '');
   const [mailSubjectInput, setMailSubjectInput] = useState(defaultMailSubject);
   const [mailBodyInput, setMailBodyInput] = useState(defaultMailBody);
+  const [mailSendProgress, setMailSendProgress] = useState('');
 
   const blobToBase64 = (blob) => {
     return new Promise((resolve, reject) => {
@@ -152,6 +153,9 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
     });
   };
   const buildPdfBlob = async () => {
+    console.log(`[PDF] Oluşturma başladı - Kategori: ${isMyk ? 'MYK (2 sayfa)' : 'İş Makineleri (1 sayfa)'}, Teklif: ${quoteId}`);
+    const startTime = Date.now();
+    
     const element = pdfContainerRef.current;
     if (!element) throw new Error('PDF container bulunamadı');
 
@@ -174,12 +178,18 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
     hiddenHost.appendChild(exportRoot);
     document.body.appendChild(hiddenHost);
 
-    // Wait for render
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Wait for render - MYK için daha uzun bekleme süresi
+    const renderWaitTime = isMyk ? 800 : 200;
+    console.log(`[PDF] Render bekleniyor: ${renderWaitTime}ms`);
+    await new Promise(resolve => setTimeout(resolve, renderWaitTime));
+
+    // MYK için optimize edilmiş pixelRatio (1.5 = yüksek kalite, makul boyut)
+    const pixelRatio = isMyk ? 1.5 : 2;
+    console.log(`[PDF] Canvas oluşturuluyor, pixelRatio: ${pixelRatio}`);
 
     const canvas = await htmlToImage.toCanvas(exportRoot, {
       cacheBust: true,
-      pixelRatio: 2,
+      pixelRatio: pixelRatio,
       width: exportRoot.scrollWidth,
       height: exportRoot.scrollHeight,
       backgroundColor: '#ffffff',
@@ -202,9 +212,15 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     
     const fitToOnePage = imgHeight <= pageHeight;
+    
+    // PNG formatı ile maksimum kalite (PDF'ler veritabanında saklanmıyor)
+    const imageFormat = 'PNG';
+    const imageQuality = 1.0;
+    console.log(`[PDF] Resim formatı: ${imageFormat}, Kalite: ${imageQuality}`);
 
     if (fitToOnePage) {
-      doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight);
+      const imageData = canvas.toDataURL(`image/${imageFormat.toLowerCase()}`, imageQuality);
+      doc.addImage(imageData, imageFormat, 0, 0, imgWidth, imgHeight);
       return doc.output('blob');
     }
 
@@ -221,17 +237,19 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
       const ctx = sliceCanvas.getContext('2d');
       ctx.drawImage(canvas, 0, position, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
 
-      const sliceData = sliceCanvas.toDataURL('image/png');
+      const sliceData = sliceCanvas.toDataURL(`image/${imageFormat.toLowerCase()}`, imageQuality);
       const sliceImgHeight = (sliceCanvas.height * imgWidth) / sliceCanvas.width;
 
       if (position > 0) doc.addPage();
-      doc.addImage(sliceData, 'PNG', 0, 0, imgWidth, sliceImgHeight);
+      doc.addImage(sliceData, imageFormat, 0, 0, imgWidth, sliceImgHeight);
 
       remainingHeight -= sliceHeight;
       position += sliceHeight;
     }
 
-    return doc.output('blob');
+    const blob = doc.output('blob');
+    console.log(`[PDF] Oluşturma tamamlandı - Süre: ${Date.now() - startTime}ms, Boyut: ${(blob.size / 1024).toFixed(2)} KB`);
+    return blob;
   };
 
   const generatePdfBlobForMail = async () => await buildPdfBlob();
@@ -297,10 +315,21 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
     }
 
     setIsSendingMail(true);
+    setMailSendProgress('PDF oluşturuluyor...');
 
     try {
+      console.log('[Mail] PDF oluşturma başlıyor...');
       const fileName = quoteData?.pdfFileName || `Teklif_${quoteId}_${getCompanySlug()}.pdf`;
-      const pdfBase64 = quoteData?.pdfBase64 || await generatePdfBase64ForCurrentQuote();
+      
+      let pdfBase64;
+      try {
+        pdfBase64 = quoteData?.pdfBase64 || await generatePdfBase64ForCurrentQuote();
+        console.log(`[Mail] PDF başarıyla oluşturuldu, boyut: ${(pdfBase64.length / 1024).toFixed(2)} KB`);
+        setMailSendProgress('Mail gönderiliyor...');
+      } catch (pdfError) {
+        console.error('[Mail] PDF oluşturma hatası:', pdfError);
+        throw new Error(`PDF oluşturulamadı: ${pdfError.message}`);
+      }
       
       // Production: use Nginx proxy (/api/), Development: use port 8787
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -332,6 +361,7 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
 
       let resp;
       let lastFetchError;
+      console.log(`[Mail] API isteği gönderiliyor: ${apiBases[0]}/api/send-quote-email`);
       for (const base of apiBases) {
         try {
           resp = await fetch(`${base}/api/send-quote-email`, {
@@ -339,8 +369,10 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
+          console.log(`[Mail] API yanıtı alındı, status: ${resp.status}`);
           break;
         } catch (fetchErr) {
+          console.error(`[Mail] API isteği başarısız (${base}):`, fetchErr);
           lastFetchError = fetchErr;
         }
       }
@@ -352,17 +384,39 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
       const data = await resp.json().catch(() => ({}));
 
       if (!resp.ok) {
+        console.error('[Mail] Server hatası:', data);
         throw new Error(data?.error || 'Mail gonderilemedi.');
       }
 
-      alert('Mail basariyla gonderildi.');
+      console.log('[Mail] Başarıyla gönderildi, teklif kaydediliyor...');
+      setMailSendProgress('Teklif kaydediliyor...');
+      
+      // Mail başarılı - şimdi teklifi otomatik kaydet
+      try {
+        await onSaveQuote({
+          finalTotal: grandTotalWithTax,
+          pdfBase64: pdfBase64,
+          pdfFileName: fileName
+        });
+        console.log('[Kayıt] Teklif başarıyla kaydedildi');
+        setMailSendProgress('Tamamlandı! ✅');
+        setTimeout(() => {
+          alert('✅ Mail başarıyla gönderildi ve teklif kaydedildi!');
+        }, 300);
+      } catch (saveErr) {
+        console.error('[Kayıt] Teklif kaydedilemedi:', saveErr);
+        alert('⚠️ Mail gönderildi ancak teklif kaydedilemedi.\n\nLütfen "Teklifi Kaydet ve Bitir" butonuna basın.');
+      }
+      
       setShowMailModal(false);
     } catch (err) {
-      console.error('SMTP mail gonderim hatasi:', err);
+      console.error('[Mail] Genel hata:', err);
       const errorDetail = err?.message || err?.toString() || JSON.stringify(err);
-      alert(`Mail gönderilemedi.\n\nHata: ${errorDetail}\n\nMail server çalışıyor mu? Konsolu kontrol edin (F12)`);
+      const categoryInfo = isMyk ? 'MYK (2 sayfa)' : 'İş Makineleri (1 sayfa)';
+      alert(`❌ Mail gönderilemedi!\n\nKategori: ${categoryInfo}\nTeklif: ${quoteId}\n\nHata: ${errorDetail}\n\nMail server çalışıyor mu? Konsolu kontrol edin (F12)`);
     } finally {
       setIsSendingMail(false);
+      setMailSendProgress('');
     }
   };
 
@@ -384,6 +438,12 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
     } finally {
       setIsSavingQuote(false);
     }
+  };
+
+  const handleOpenMailModal = () => {
+    // Mail modalı açılırken müşteri email'ini güncelle
+    setMailTo(customer.email || '');
+    setShowMailModal(true);
   };
 
   const handleCopyMailText = () => {
@@ -430,7 +490,7 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
           <span>{isExporting ? 'Bekleyin...' : 'PDF İndir'}</span>
         </button>
         <button
-          onClick={() => setShowMailModal(true)}
+          onClick={handleOpenMailModal}
           className="flex flex-col items-center justify-center p-2.5 bg-white border border-slate-200 rounded-2xl text-slate-800 font-bold text-[11px] shadow-sm hover:border-[#1b365d] active-tap"
         >
           <Mail size={18} className="text-[#ff6b00] mb-1" />
@@ -558,6 +618,17 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
                             <td className="py-1.5 px-2 text-center" style={{ border: '1px solid #cbd5e1' }}>{idx + 1}</td>
                             <td className="py-1.5 px-2 font-semibold uppercase" style={{ border: '1px solid #cbd5e1' }}>
                               <div>{it.code ? `${it.code} ${it.title}` : it.title}</div>
+                              {it.isManual && (
+                                <div className="normal-case text-[9px] text-slate-600 mt-1 space-y-0.5 font-medium">
+                                  {it.parentCategory && <div><span className="font-bold">Üst kategori:</span> {it.parentCategory}</div>}
+                                  {((it.subcategories?.length > 0) || (it.subcategory && it.subcategory !== 'manuel')) && (
+                                    <div>
+                                      <span className="font-bold">Alt kategoriler:</span>{' '}
+                                      {(it.subcategories?.length > 0 ? it.subcategories : [it.subcategory]).join(' | ')}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               {Array.isArray(it.infoChildren) && it.infoChildren.length > 0 && (
                                 <ul className="list-disc pl-4 mt-1 normal-case text-[9px] text-slate-600 space-y-0.5 font-medium">
                                   {it.infoChildren.map((child) => (
@@ -937,7 +1008,7 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
                 className="flex-1 py-2.5 bg-[#ff6b00] disabled:opacity-60 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow active-tap"
               >
                 <Send size={14} />
-                <span>{isSendingMail ? 'Gönderiliyor...' : 'Mail Gönder (PDF Ekli)'}</span>
+                <span>{isSendingMail ? (mailSendProgress || 'Gönderiliyor...') : 'Mail Gönder (PDF Ekli)'}</span>
               </button>
             </div>
           </div>

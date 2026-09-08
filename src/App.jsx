@@ -71,10 +71,7 @@ export default function App() {
     return sanitizeQuotes(initial);
   });
 
-  const [customers, setCustomers] = useState(() => {
-    const saved = localStorage.getItem('teklifpro_customers');
-    return saved ? JSON.parse(saved) : MOCK_CUSTOMERS;
-  });
+  const [customers, setCustomers] = useState([]);
 
   const [notes, setNotes] = useState(() => {
     const saved = localStorage.getItem('teklifpro_notes');
@@ -127,9 +124,40 @@ export default function App() {
     }
   }, [quotes]);
 
+  // Backend'den müşterileri yükle
   useEffect(() => {
-    localStorage.setItem('teklifpro_customers', JSON.stringify(customers));
-  }, [customers]);
+    const loadCustomers = async () => {
+      try {
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const apiUrl = isLocalhost ? 'http://localhost:8787/api/customers' : '/api/customers';
+        
+        const response = await fetch(apiUrl);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.ok && Array.isArray(result.data)) {
+            setCustomers(result.data.map(c => ({
+              id: c.CustomerId,
+              companyName: c.CompanyName,
+              authorizedPerson: c.AuthorizedPerson,
+              email: c.Email,
+              phone: c.Phone,
+              address: c.Address,
+              taxOffice: c.TaxOffice,
+              taxNo: c.TaxNo
+            })));
+          }
+        }
+      } catch (error) {
+        console.error('Müşteriler yüklenemedi:', error);
+        // Hata durumunda mock data kullan
+        setCustomers(MOCK_CUSTOMERS);
+      }
+    };
+    
+    if (currentUser) {
+      loadCustomers();
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     localStorage.setItem('teklifpro_notes', JSON.stringify(notes));
@@ -174,16 +202,19 @@ export default function App() {
     setActiveTab('wizard_customer');
   };
 
-  const handleCustomerFormSubmit = (custData) => {
+  const handleCustomerFormSubmit = async (custData) => {
     setWizardCustomer(custData);
 
     // Auto add customer to saved customers if not already present
     const exists = customers.some(c => c.companyName.toLowerCase() === custData.companyName.toLowerCase());
     if (!exists) {
-      setCustomers(prev => [{
+      const newCustomer = {
         id: `CUST-${Date.now()}`,
         ...custData
-      }, ...prev]);
+      };
+      
+      // Backend'e kaydet (sessiz modda - alert gösterme)
+      await handleAddCustomer(newCustomer, { silent: true });
     }
 
     setActiveTab('wizard_items');
@@ -344,38 +375,70 @@ export default function App() {
     setCatalog(INITIAL_CATALOG);
   };
 
-  const handleAddCustomer = async (newCust) => {
-    setCustomers(prev => [newCust, ...prev]);
+  const handleAddCustomer = async (newCust, options = {}) => {
+    const { silent = false } = options;
     
-    // Müşteriye tanıtım maili gönder
-    if (newCust.email) {
-      try {
-        // Production: use Nginx proxy (/api/), Development: use port 8787
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const apiUrl = isLocalhost ? 'http://localhost:8787/api/send-welcome-email' : '/api/send-welcome-email';
-        
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: newCust.email,
-            companyName: newCust.companyName
-          })
-        });
-        
-        if (response.ok) {
-          console.log('Tanıtım maili gönderildi:', newCust.email);
-          alert(`✅ Müşteri kaydedildi!\n\nTanıtım maili ${newCust.email} adresine başarıyla gönderildi.`);
-        } else {
-          alert(`⚠️ Müşteri kaydedildi ancak tanıtım maili gönderilemedi.\n\nMüşteri: ${newCust.companyName}\nE-posta: ${newCust.email}`);
-        }
-      } catch (error) {
-        console.error('Tanıtım maili gönderilemedi:', error);
-        alert(`⚠️ Müşteri kaydedildi ancak tanıtım maili gönderilemedi.\n\nHata: ${error.message || 'Bağlantı hatası'}`);
+    try {
+      // Backend'e kaydet
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const apiUrl = isLocalhost ? 'http://localhost:8787/api/customers' : '/api/customers';
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: newCust.id,
+          companyName: newCust.companyName,
+          authorizedPerson: newCust.authorizedPerson,
+          email: newCust.email,
+          phone: newCust.phone,
+          address: newCust.address,
+          taxOffice: newCust.taxOffice,
+          taxNo: newCust.taxNo,
+          createdBy: currentUser?.name
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Backend müşteri kaydedemedi');
       }
-    } else {
-      // E-posta yoksa sadece müşteri eklendi bildirimi
-      alert(`✅ Müşteri başarıyla kaydedildi!\n\n${newCust.companyName}`);
+      
+      // Backend'e başarıyla kaydedildi, local state'i güncelle
+      setCustomers(prev => [newCust, ...prev]);
+      
+      // Müşteriye tanıtım maili gönder
+      if (newCust.email && !silent) {
+        try {
+          const mailApiUrl = isLocalhost ? 'http://localhost:8787/api/send-welcome-email' : '/api/send-welcome-email';
+          
+          const mailResponse = await fetch(mailApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: newCust.email,
+              companyName: newCust.companyName
+            })
+          });
+          
+          if (mailResponse.ok) {
+            console.log('Tanıtım maili gönderildi:', newCust.email);
+            alert(`✅ Müşteri kaydedildi!\n\nTanıtım maili ${newCust.email} adresine başarıyla gönderildi.`);
+          } else {
+            alert(`✅ Müşteri kaydedildi!\n\n⚠️ Ancak tanıtım maili gönderilemedi.\n\nMüşteri: ${newCust.companyName}\nE-posta: ${newCust.email}`);
+          }
+        } catch (mailError) {
+          console.error('Tanıtım maili gönderilemedi:', mailError);
+          alert(`✅ Müşteri kaydedildi!\n\n⚠️ Ancak tanıtım maili gönderilemedi.\n\nHata: ${mailError.message || 'Bağlantı hatası'}`);
+        }
+      } else if (!silent) {
+        // E-posta yoksa sadece müşteri eklendi bildirimi
+        alert(`✅ Müşteri başarıyla kaydedildi!\n\n${newCust.companyName}`);
+      }
+    } catch (error) {
+      console.error('Müşteri kaydedilemedi:', error);
+      if (!silent) {
+        alert(`❌ Müşteri kaydedilemedi!\n\nHata: ${error.message || 'Bağlantı hatası'}\n\nLütfen tekrar deneyin.`);
+      }
     }
   };
 

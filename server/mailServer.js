@@ -82,7 +82,7 @@ const sendWithFallback = async (mailOptions) => {
 };
 
 app.use(cors());
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '100mb' })); // MYK için 2 sayfalı PDF desteği (artırıldı)
 
 // API routes
 app.use('/api', apiRoutes);
