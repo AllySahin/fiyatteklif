@@ -3,6 +3,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { promisify } from 'util';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.env') });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +17,23 @@ const DB_PATH = path.join(__dirname, '..', 'database', 'vefa.db');
 const dbDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+export const isSupabaseEnabled = Boolean(supabaseUrl && supabaseAnonKey);
+export let supabase = null;
+
+export async function getSupabaseClient() {
+  if (!isSupabaseEnabled) return null;
+  if (!supabase) {
+    const { createClient } = await import('@supabase/supabase-js');
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+  }
+  return supabase;
 }
 
 // SQLite veritabanı bağlantısı
@@ -118,6 +138,15 @@ async function initializeTables() {
       CREATE INDEX IF NOT EXISTS IX_Quotes_Status ON Quotes(Status);
     `);
 
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS CatalogItems (
+        Id TEXT PRIMARY KEY,
+        ItemJson TEXT NOT NULL,
+        CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UpdatedAt DATETIME
+      );
+    `);
+
     // Notes tablosu
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS Notes (
@@ -174,6 +203,24 @@ async function initializeTables() {
       CREATE INDEX IF NOT EXISTS IX_Tasks_DueDate ON Tasks(DueDate);
     `);
     
+    const catalogRows = await db.allAsync('SELECT Id, ItemJson FROM CatalogItems');
+    for (const row of catalogRows) {
+      const item = JSON.parse(row.ItemJson);
+      if (String(item.category || '').toLowerCase() === 'poly') {
+        await db.runAsync('DELETE FROM CatalogItems WHERE Id = ?', [row.Id]);
+      }
+    }
+
+    const quotes = await db.allAsync('SELECT QuoteId, Category, ItemsJson FROM Quotes');
+    for (const quote of quotes) {
+      const hasPolyCategory = String(quote.Category || '').toLowerCase() === 'poly';
+      const items = quote.ItemsJson ? JSON.parse(quote.ItemsJson) : [];
+      const hasPolyItems = Array.isArray(items) && items.some(item => String(item?.category || '').toLowerCase() === 'poly');
+      if (hasPolyCategory || hasPolyItems) {
+        await db.runAsync('DELETE FROM Quotes WHERE QuoteId = ?', [quote.QuoteId]);
+      }
+    }
+
     console.log('SQLite tabloları kontrol edildi/oluşturuldu');
   } catch (err) {
     console.error('Tablo oluşturma hatası:', err);

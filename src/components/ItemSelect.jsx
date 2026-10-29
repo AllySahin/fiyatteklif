@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { ArrowLeft, Search, Check, ChevronDown, ChevronUp, Plus, Minus, Edit3, X } from 'lucide-react';
-import { SUBCATEGORIES, POLY_SUBCATEGORIES, IS_MAKINESI_SUBCATS } from '../data/catalogData';
+import { SUBCATEGORIES, IS_MAKINESI_SUBCATS } from '../data/catalogData';
 
-export default function ItemSelect({ catalog, selectedItems, category, onToggleItem, onUpdateItemPrice, onBack, onConfirm }) {
+export default function ItemSelect({ catalog, selectedItems, category, onToggleItem, onUpdateItemPrice, onAddCatalogItem, onBack, onConfirm }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [openGroups, setOpenGroups] = useState({});
   const [openParents, setOpenParents] = useState({}); // For parent item accordion
@@ -19,9 +19,20 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
   const [manualSubcategoryInput, setManualSubcategoryInput] = useState('');
   const [manualSubcategories, setManualSubcategories] = useState([]);
 
-  const subcats = category === 'ismakineleri'
-    ? IS_MAKINESI_SUBCATS
-    : [...SUBCATEGORIES, ...POLY_SUBCATEGORIES].filter(s => s.cat === category);
+  const manualSubcategoryId = `manuel_${category}`;
+  const hasManualItems = catalog.some(item => item.category === category && item.subcategory === manualSubcategoryId);
+  const subcats = useMemo(
+    () => category === 'ismakineleri'
+      ? IS_MAKINESI_SUBCATS
+      : SUBCATEGORIES.filter(s => s.cat === category),
+    [category]
+  );
+  const visibleSubcats = useMemo(
+    () => hasManualItems
+      ? [...subcats, { id: manualSubcategoryId, name: 'Manuel Eklenen Kalemler', cat: category }]
+      : subcats,
+    [category, hasManualItems, manualSubcategoryId, subcats]
+  );
   const existingParentOptions = catalog
     .filter(item => item.category === category && item.isParent)
     .filter((item, index, list) => list.findIndex(candidate => candidate.title === item.title) === index)
@@ -32,7 +43,7 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
     const q = searchQuery.trim().toLowerCase();
     const result = {};
     
-    for (const sub of subcats) {
+    for (const sub of visibleSubcats) {
       const allItems = catalog.filter(item => {
         if (item.subcategory !== sub.id) return false;
         if (item.category !== category) return false;
@@ -65,7 +76,7 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
     }
     
     return result;
-  }, [catalog, subcats, category, searchQuery]);
+  }, [catalog, visibleSubcats, category, searchQuery]);
 
   const toggleGroup = (id) => setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
   const toggleParent = (id) => setOpenParents(prev => ({ ...prev, [id]: !prev[id] }));
@@ -119,10 +130,10 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
 
   const startEdit = (item) => {
     setEditingId(item.id);
-    setEditVal(String(item.price ?? item.basePrice));
+    setEditVal(String(item.customPrice ?? item.price ?? item.basePrice));
   };
 
-  const handleManualAdd = () => {
+  const handleManualAdd = async () => {
     const isWorkMachine = category === 'ismakineleri';
     const selectedParent = existingParentOptions.find(item => item.id === manualParentCategory);
     const parentTitle = selectedParent?.name || manualNewParentCategory.trim();
@@ -144,14 +155,17 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
     }
 
     const manualItem = {
-      id: `manual-${Date.now()}`,
+      id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       code: isWorkMachine ? `MANUEL-${Date.now().toString().slice(-6)}` : manualDocumentNumber.trim(),
       title: manualItemName.trim(),
       basePrice: price,
       price: price,
       quantity: 1,
       category: category,
-      subcategory: 'manuel',
+      subcategory: manualSubcategoryId,
+      taxRate: isWorkMachine ? 10 : 20,
+      unit: 'KİŞİ',
+      description: '',
       ...(isWorkMachine ? {} : {
         documentNumber: manualDocumentNumber.trim(),
         subcategories: manualSubcategories,
@@ -165,17 +179,22 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
       isManual: true
     };
 
-    onToggleItem(manualItem);
+    try {
+      const savedItem = await onAddCatalogItem(manualItem);
+      onToggleItem(savedItem);
 
-    // Form'u sıfırla
-    setManualItemName('');
-    setManualDocumentNumber('');
-    setManualItemPrice('');
-    setManualParentCategory('');
-    setManualNewParentCategory('');
-    setManualSubcategoryInput('');
-    setManualSubcategories([]);
-    setShowManualAddModal(false);
+      setManualItemName('');
+      setManualDocumentNumber('');
+      setManualItemPrice('');
+      setManualParentCategory('');
+      setManualNewParentCategory('');
+      setManualSubcategoryInput('');
+      setManualSubcategories([]);
+      setShowManualAddModal(false);
+    } catch (error) {
+      console.error('Manuel kalem kataloğa eklenemedi:', error);
+      alert(`Kalem tüm kullanıcıların kataloğuna eklenemedi.\n\n${error.message || 'Bağlantı hatası'}`);
+    }
   };
 
   const addManualSubcategory = () => {
@@ -242,7 +261,7 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
 
       {/* ── Accordion List ──────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pb-52 px-3 pt-3 space-y-2">
-        {subcats.map(sub => {
+        {visibleSubcats.map(sub => {
           const items = grouped[sub.id];
           if (!items) return null;
           const isOpen = effectiveOpen[sub.id] ?? false;
@@ -338,7 +357,7 @@ export default function ItemSelect({ catalog, selectedItems, category, onToggleI
                                     ) : (
                                       <>
                                         <span className={`text-sm font-bold ${sel ? 'text-[#ff6b00]' : 'text-[#1b365d]'}`}>
-                                          {(sel?.price ?? item.basePrice).toLocaleString('tr-TR')} ₺
+                                          {(sel?.customPrice ?? sel?.price ?? item.basePrice).toLocaleString('tr-TR')} ₺
                                         </span>
                                         {sel && (
                                           <button

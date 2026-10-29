@@ -18,6 +18,11 @@ import { INITIAL_CATALOG } from './data/catalogData';
 import { MOCK_QUOTES, MOCK_CUSTOMERS, MOCK_NOTES } from './data/mockData';
 import { PRESET_USERS } from './data/usersData';
 
+const getApiUrl = (endpoint) => {
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  return isLocalhost ? `http://localhost:8787/api${endpoint}` : `/api${endpoint}`;
+};
+
 export default function App() {
   const getCategoryCode = (cat) => (cat === 'myk' ? 'M' : 'I');
 
@@ -26,6 +31,8 @@ export default function App() {
     const seen = new Set();
 
     return list.filter((quote) => {
+      if (String(quote?.category || quote?.Category || '').toLowerCase() === 'poly') return false;
+      if (Array.isArray(quote?.items) && quote.items.some(item => String(item?.category || '').toLowerCase() === 'poly')) return false;
       const id = String(quote?.id || '').trim();
       if (!id) return true;
       if (seen.has(id)) return false;
@@ -78,20 +85,14 @@ export default function App() {
     return saved ? JSON.parse(saved) : MOCK_NOTES;
   });
 
-  // CATALOG: versioned key — eski önbellekler otomatik atılır
-  const CATALOG_VERSION = 'v11';
-  const CATALOG_KEY = `teklifpro_catalog_${CATALOG_VERSION}`;
-  const [catalog, setCatalog] = useState(() => {
-    ['teklifpro_catalog', 'teklifpro_catalog_v1', 'teklifpro_catalog_v2', 'teklifpro_catalog_v3', 'teklifpro_catalog_v4', 'teklifpro_catalog_v5', 'teklifpro_catalog_v6', 'teklifpro_catalog_v7', 'teklifpro_catalog_v8', 'teklifpro_catalog_v9', 'teklifpro_catalog_v10'].forEach(k => localStorage.removeItem(k));
-    const saved = localStorage.getItem(CATALOG_KEY);
-    return saved ? JSON.parse(saved) : INITIAL_CATALOG;
-  });
+  const [catalog, setCatalog] = useState(INITIAL_CATALOG);
 
   // Active Quote Wizard State
   const [wizardCategory, setWizardCategory] = useState('ismakineleri'); // 'ismakineleri' | 'myk'
   const [wizardCustomer, setWizardCustomer] = useState(null);
   const [wizardSelectedItems, setWizardSelectedItems] = useState([]);
   const [selectedQuoteForPreview, setSelectedQuoteForPreview] = useState(null);
+  const [editingQuoteId, setEditingQuoteId] = useState(null);
 
   // Quick Note Modal State
   const [showQuickNoteModal, setShowQuickNoteModal] = useState(false);
@@ -164,8 +165,24 @@ export default function App() {
   }, [notes]);
 
   useEffect(() => {
-    localStorage.setItem(CATALOG_KEY, JSON.stringify(catalog));
-  }, [catalog]);
+    if (!currentUser) return;
+
+    const loadCatalog = async () => {
+      try {
+        const response = await fetch(getApiUrl('/catalog'));
+        const result = await response.json();
+        if (!response.ok || !result.ok || !Array.isArray(result.data)) {
+          throw new Error(result.error || 'Katalog sunucudan yüklenemedi.');
+        }
+        setCatalog(result.data);
+      } catch (error) {
+        console.error('Katalog yüklenemedi:', error);
+        alert(`Katalog sunucudan yüklenemedi.\n\n${error.message || 'Bağlantı hatası'}`);
+      }
+    };
+
+    loadCatalog();
+  }, [currentUser]);
 
 
   // Auth Handlers
@@ -194,6 +211,7 @@ export default function App() {
     setWizardCustomer(null);
     setWizardSelectedItems([]);
     setSelectedQuoteForPreview(null);
+    setEditingQuoteId(null);
     setActiveTab('wizard_category');
   };
 
@@ -258,7 +276,7 @@ export default function App() {
 
     // Is makineleri kalemlerinde son girilen fiyat kalici olsun.
     if (wizardCategory === 'ismakineleri') {
-      setCatalog(prev => prev.map(i => i.id === itemId ? { ...i, basePrice: newPrice } : i));
+      handleUpdateCatalogBasePrice(itemId, newPrice);
     }
   };
 
@@ -286,7 +304,10 @@ export default function App() {
   const handleGenerateQuotePreview = () => {
     const now = new Date();
     const todayStr = now.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const generatedQuoteId = getNextQuoteId(quotes, wizardCategory, now);
+    const quoteBeingEdited = editingQuoteId
+      ? quotes.find((quote) => quote.id === editingQuoteId)
+      : null;
+    const generatedQuoteId = quoteBeingEdited?.id || getNextQuoteId(quotes, wizardCategory, now);
     
     // Default valid date 15 days later
     const futureDate = new Date(now);
@@ -294,43 +315,50 @@ export default function App() {
     const validUntilStr = futureDate.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
     const newQuote = {
+      ...quoteBeingEdited,
       id: generatedQuoteId,
-      date: todayStr,
-      validUntil: validUntilStr,
+      date: quoteBeingEdited?.date || todayStr,
+      validUntil: quoteBeingEdited?.validUntil || validUntilStr,
       category: wizardCategory,
       customer: wizardCustomer,
       items: wizardSelectedItems,
       totalAmount: calculateQuoteTotal(wizardSelectedItems, wizardCategory),
-      status: 'Gönderildi',
-      createdAt: new Date().toISOString(),
-      createdByName: currentUser.name,
-      createdByPhone: currentUser.phone
+      status: quoteBeingEdited?.status || 'Gönderildi',
+      createdAt: quoteBeingEdited?.createdAt || new Date().toISOString(),
+      createdByName: quoteBeingEdited?.createdByName || currentUser.name,
+      createdByPhone: quoteBeingEdited?.createdByPhone || currentUser.phone
     };
 
+    setQuotes((prev) => [newQuote, ...prev.filter((quote) => quote.id !== newQuote.id)]);
     setSelectedQuoteForPreview(newQuote);
     setActiveTab('wizard_preview');
   };
 
-  const handleSaveQuoteAndFinish = (savedQuoteData) => {
+  const handleSaveQuote = (savedQuoteData) => {
     if (selectedQuoteForPreview) {
-      const finalTotal = typeof savedQuoteData === 'object' && savedQuoteData !== null
-        ? savedQuoteData.finalTotal
-        : savedQuoteData;
-
       const quoteToSave = {
         ...selectedQuoteForPreview,
-        totalAmount: finalTotal,
-        // Don't save PDF to localStorage (can be regenerated, saves storage space)
-        pdfFileName: savedQuoteData?.pdfFileName || selectedQuoteForPreview.pdfFileName || `Teklif_${selectedQuoteForPreview.id}.pdf`
+        totalAmount: savedQuoteData?.finalTotal ?? selectedQuoteForPreview.totalAmount,
+        pdfFileName: savedQuoteData?.pdfFileName || selectedQuoteForPreview.pdfFileName || `Teklif_${selectedQuoteForPreview.id}.pdf`,
+        downloadedAt: savedQuoteData?.downloadedAt || selectedQuoteForPreview.downloadedAt
       };
       setQuotes(prev => [quoteToSave, ...prev.filter((q) => q.id !== quoteToSave.id)]);
+      setSelectedQuoteForPreview(quoteToSave);
     }
-    setActiveTab('dashboard');
   };
 
   const handleSelectQuoteFromDashboard = (quote) => {
     setSelectedQuoteForPreview(quote);
+    setEditingQuoteId(null);
     setActiveTab('wizard_preview');
+  };
+
+  const handleEditQuote = (quote) => {
+    setEditingQuoteId(quote.id);
+    setWizardCategory(quote.category);
+    setWizardCustomer(quote.customer);
+    setWizardSelectedItems(quote.items || []);
+    setActiveTab('wizard_customer');
   };
 
   const handleStartQuoteForCustomer = (cust) => {
@@ -344,6 +372,8 @@ export default function App() {
     });
     setWizardSelectedItems([]);
     setWizardCategory('ismakineleri');
+    setEditingQuoteId(null);
+    setSelectedQuoteForPreview(null);
     setActiveTab('wizard_category');
   };
 
@@ -366,13 +396,52 @@ export default function App() {
 
   // Catalog Price Update
   const handleUpdateCatalogBasePrice = (itemId, newPrice) => {
-    setCatalog(prev => prev.map(i => i.id === itemId ? { ...i, basePrice: newPrice } : i));
+    const savePrice = async () => {
+      try {
+        const response = await fetch(getApiUrl(`/catalog/${encodeURIComponent(itemId)}/price`), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ basePrice: newPrice })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+          throw new Error(result.error || 'Katalog fiyatı kaydedilemedi.');
+        }
+        setCatalog(prev => prev.map(item => item.id === itemId ? result.data : item));
+      } catch (error) {
+        console.error('Katalog fiyatı kaydedilemedi:', error);
+        alert(`Katalog fiyatı kaydedilemedi.\n\n${error.message || 'Bağlantı hatası'}`);
+      }
+    };
+    savePrice();
   };
 
-  // Reset catalog to fresh defaults
-  const handleResetCatalog = () => {
-    ['teklifpro_catalog', 'teklifpro_catalog_v1', 'teklifpro_catalog_v2', 'teklifpro_catalog_v3', 'teklifpro_catalog_v4', 'teklifpro_catalog_v5', 'teklifpro_catalog_v6', 'teklifpro_catalog_v7', 'teklifpro_catalog_v8', CATALOG_KEY].forEach(k => localStorage.removeItem(k));
-    setCatalog(INITIAL_CATALOG);
+  const handleAddCatalogItem = async (item) => {
+    const response = await fetch(getApiUrl('/catalog'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || 'Kalem kataloğa kaydedilemedi.');
+    }
+    setCatalog(prev => prev.some(existing => existing.id === result.data.id) ? prev : [...prev, result.data]);
+    return result.data;
+  };
+
+  const handleResetCatalog = async () => {
+    try {
+      const response = await fetch(getApiUrl('/catalog/reset'), { method: 'POST' });
+      const result = await response.json();
+      if (!response.ok || !result.ok || !Array.isArray(result.data)) {
+        throw new Error(result.error || 'Katalog sıfırlanamadı.');
+      }
+      setCatalog(result.data);
+    } catch (error) {
+      console.error('Katalog sıfırlanamadı:', error);
+      alert(`Katalog sıfırlanamadı.\n\n${error.message || 'Bağlantı hatası'}`);
+    }
   };
 
   const handleAddCustomer = async (newCust, options = {}) => {
@@ -485,6 +554,7 @@ export default function App() {
             onToggleItem={handleToggleItem}
             onUpdateItemPrice={handleUpdateItemPrice}
             onUpdateItemQuantity={handleUpdateItemQuantity}
+            onAddCatalogItem={handleAddCatalogItem}
             onConfirm={handleGenerateQuotePreview}
             onBack={() => setActiveTab('wizard_customer')}
           />
@@ -494,7 +564,8 @@ export default function App() {
           <QuotePreview
             quoteData={selectedQuoteForPreview}
             currentUser={currentUser}
-            onSaveQuote={handleSaveQuoteAndFinish}
+            onSaveQuote={handleSaveQuote}
+            onEditQuote={handleEditQuote}
             onBack={() => {
               if (wizardSelectedItems.length > 0) {
                 setActiveTab('wizard_items');

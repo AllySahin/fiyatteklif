@@ -14,7 +14,6 @@ export default function CategorySelect({ onSelectCategory, onBack }) {
   const getBgColor = (id) => {
     if (id === 'ismakineleri') return 'bg-amber-50 text-amber-600';
     if (id === 'myk') return 'bg-blue-50 text-blue-600';
-    if (id === 'poly') return 'bg-green-50 text-green-600';
     return 'bg-slate-50 text-slate-600';
   };
 

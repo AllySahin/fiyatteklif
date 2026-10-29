@@ -3,8 +3,7 @@
 
 export const CATEGORIES = [
   { id: 'ismakineleri', name: 'İş Makineleri Eğitimi', icon: 'Truck', count: 'Operatörlük Kursları' },
-  { id: 'myk', name: 'MYK Belgelendirme - LONCA', icon: 'Award', count: 'Lonca Belgelendirme A.Ş.' },
-  { id: 'poly', name: 'MYK Belgelendirme - POLY', icon: 'Award', count: 'Poly Cert Belgelendirme' }
+  { id: 'myk', name: 'MYK Belgelendirme - LONCA', icon: 'Award', count: 'Lonca Belgelendirme A.Ş.' }
 ];
 
 // MYK alt kategorileri - LONCA (akordion grupları)
@@ -19,16 +18,6 @@ export const SUBCATEGORIES = [
   { id: 'myk_lonca_turizm',    cat: 'myk', name: 'Turizm, Konaklama & Yiyecek-İçecek' },
   { id: 'myk_lonca_hizmet',    cat: 'myk', name: 'Toplumsal & Kişisel Hizmetler' },
   { id: 'myk_lonca_ulastirma', cat: 'myk', name: 'Ulaştırma, Lojistik & Haberleşme' }
-];
-
-// MYK alt kategorileri - POLY CERT (akordion grupları)
-export const POLY_SUBCATEGORIES = [
-  { id: 'poly_insaat',     cat: 'poly', name: 'İnşaat Sektörü' },
-  { id: 'poly_metal',      cat: 'poly', name: 'Metal, Kaynak & Boru Montajı' },
-  { id: 'poly_elektrik',   cat: 'poly', name: 'Elektrik & Elektronik' },
-  { id: 'poly_makine',     cat: 'poly', name: 'Makine Bakım & Montaj' },
-  { id: 'poly_ulastirma',  cat: 'poly', name: 'Ulaştırma, Lojistik & Vinç' },
-  { id: 'poly_ticaret',    cat: 'poly', name: 'Ticaret & Satış' }
 ];
 
 // İş makineleri alt kategorileri (kurslar sonradan eklenecek)
@@ -320,126 +309,6 @@ const LONCA_ITEMS = [
   { cat: 'TURIZM', code: '13UY0183-4/00', title: 'PASTACI (Alternatif 1)', unitCode: '', price: 33100, isParent: true },
 ];
 
-// ─── POLY CERT BELGELENDİRME FİYAT LİSTESİ ─────────────────────────────────
-
-const POLY_ITEMS = [
-  // İNŞAAT SEKTÖRÜ
-  { cat: 'İNŞAAT', code: '11UY0011-3', title: 'AHŞAP KALIPÇI', unitCode: '', price: 15300, isParent: true },
-  { cat: 'İNŞAAT', code: '12UY0054-3', title: 'ALÇI LEVHA UYGULAYICISI', unitCode: '', price: 15000, isParent: true },
-  { cat: 'İNŞAAT', code: '12UY0055-3', title: 'ALÇI SIVA UYGULAYICISI', unitCode: '', price: 15000, isParent: true },
-  { cat: 'İNŞAAT', code: '11UY0012-3', title: 'BETONARME DEMİRCİSİ', unitCode: '', price: 16600, isParent: true },
-  { cat: 'İNŞAAT', code: '12UY0049-3', title: 'BETONCU', unitCode: '', price: 16050, isParent: true },
-  { cat: 'İNŞAAT', code: '12UY0048-3', title: 'DUVARCISI (Tüm Birimler)', unitCode: '', price: 14250, isParent: true },
-  { cat: 'İNŞAAT', code: '12UY0048-3', title: 'DUVARCISI (B1 - Genel Duvarcı İşlemleri)', unitCode: 'B1', price: 14250, isParent: false },
-  { cat: 'İNŞAAT', code: '12UY0057-3', title: 'ISI YALITIMCISI', unitCode: '', price: 14250, isParent: true },
-  { cat: 'İNŞAAT', code: '11UY0023-3', title: 'İNŞAAT BOYACISI', unitCode: '', price: 11625, isParent: true },
-  { cat: 'İNŞAAT', code: '16UY0253-2', title: 'İNŞAAT İŞÇİSİ', unitCode: '', price: 9000, isParent: true },
-  { cat: 'İNŞAAT', code: '12UY0056-3', title: 'İSKELE KURULUM ELEMANI', unitCode: '', price: 13500, isParent: true },
-  { cat: 'İNŞAAT', code: '12UY0050-3', title: 'PANEL KALIPÇI', unitCode: '', price: 16800, isParent: true },
-  { cat: 'İNŞAAT', code: '12UY0051-3', title: 'SERAMİK KARO KAPLAMACISI', unitCode: '', price: 16800, isParent: true },
-  { cat: 'İNŞAAT', code: '11UY0024-3', title: 'SIVACI', unitCode: '', price: 15000, isParent: true },
-
-  // METAL, KAYNAK & BORU MONTAJI
-  { cat: 'METAL', code: '11UY0014-3', title: 'ALÜMİNYUM KAYNAKÇISI (Tüm Birimler)', unitCode: '', price: 9000, isParent: true },
-  { cat: 'METAL', code: '11UY0014-3', title: 'ALÜMİNYUM KAYNAKÇISI (B1 - MIG Kaynağı Alüminyum (131))', unitCode: 'B1', price: 9000, isParent: false },
-  { cat: 'METAL', code: '11UY0014-3', title: 'ALÜMİNYUM KAYNAKÇISI (B2 - TIG Kaynağı Alüminyum (141))', unitCode: 'B2', price: 9000, isParent: false },
-  
-  { cat: 'METAL', code: '11UY0010-3', title: 'ÇELİK KAYNAKÇISI (Tüm Birimler)', unitCode: '', price: 7500, isParent: true },
-  { cat: 'METAL', code: '11UY0010-3', title: 'ÇELİK KAYNAKÇISI (B1 - Elektrotla Ark Kaynağı (111))', unitCode: 'B1', price: 7500, isParent: false },
-  { cat: 'METAL', code: '11UY0010-3', title: 'ÇELİK KAYNAKÇISI (B6 - MAG Kaynağı (135))', unitCode: 'B6', price: 7500, isParent: false },
-  { cat: 'METAL', code: '11UY0010-3', title: 'ÇELİK KAYNAKÇISI (B9 - TIG Kaynağı (141))', unitCode: 'B9', price: 7500, isParent: false },
-  { cat: 'METAL', code: '11UY0010-3', title: 'ÇELİK KAYNAKÇISI (B14 - Oksi-Asetilen Kaynağı (311))', unitCode: 'B14', price: 7500, isParent: false },
-  
-  { cat: 'METAL', code: '11UY0015-4', title: 'DİRENÇ KAYNAK AYARCISI (Tüm Birimler)', unitCode: '', price: 7125, isParent: true },
-  { cat: 'METAL', code: '11UY0015-4', title: 'DİRENÇ KAYNAK AYARCISI (B1 - Direnç Nokta Kaynağı (21))', unitCode: 'B1', price: 7125, isParent: false },
-  { cat: 'METAL', code: '11UY0015-4', title: 'DİRENÇ KAYNAK AYARCISI (B2 - Dikiş Direnç Kaynağı (22))', unitCode: 'B2', price: 7125, isParent: false },
-  { cat: 'METAL', code: '11UY0015-4', title: 'DİRENÇ KAYNAK AYARCISI (B3 - Projeksiyon Kabartmalı Kaynak (23))', unitCode: 'B3', price: 7125, isParent: false },
-  
-  { cat: 'METAL', code: '11UY0013-3', title: 'ENDÜSTRİYEL BORU MONTAJCISI (Tüm Birimler)', unitCode: '', price: 12000, isParent: true },
-  { cat: 'METAL', code: '11UY0013-3', title: 'ENDÜSTRİYEL BORU MONTAJCISI (B2 - Endüstriyel Boru Montajı)', unitCode: 'B2', price: 12000, isParent: false },
-  
-  { cat: 'METAL', code: '11UY0016-4', title: 'KAYNAK OPERATÖRÜ (Tüm Birimler)', unitCode: '', price: 7800, isParent: true },
-  { cat: 'METAL', code: '11UY0016-4', title: 'KAYNAK OPERATÖRÜ (B3 - MAG Kaynağı (135))', unitCode: 'B3', price: 7800, isParent: false },
-  { cat: 'METAL', code: '11UY0016-4', title: 'KAYNAK OPERATÖRÜ (B4 - TIG Kaynağı (141))', unitCode: 'B4', price: 7800, isParent: false },
-  { cat: 'METAL', code: '11UY0016-4', title: 'KAYNAK OPERATÖRÜ (B7 - Toz Altı Ark Kaynağı (121))', unitCode: 'B7', price: 7800, isParent: false },
-  
-  { cat: 'METAL', code: '12UY0083-3', title: 'METAL KESİMCİ (Tüm Birimler)', unitCode: '', price: 9000, isParent: true },
-  { cat: 'METAL', code: '12UY0083-3', title: 'METAL KESİMCİ (B1 - Giyotin Makasla Kesim)', unitCode: 'B1', price: 9000, isParent: false },
-  { cat: 'METAL', code: '12UY0083-3', title: 'METAL KESİMCİ (B2 - Oksi-Gaz ile Kesim)', unitCode: 'B2', price: 9000, isParent: false },
-  { cat: 'METAL', code: '12UY0083-3', title: 'METAL KESİMCİ (B3 - Şerit Testere ile Kesim)', unitCode: 'B3', price: 9000, isParent: false },
-  { cat: 'METAL', code: '12UY0083-3', title: 'METAL KESİMCİ (B4 - Daire Testere ile Kesim)', unitCode: 'B4', price: 9000, isParent: false },
-  
-  { cat: 'METAL', code: '12UY0085-3', title: 'METAL SAC İŞLEMECİ', unitCode: '', price: 8100, isParent: true },
-
-  // ELEKTRİK & ELEKTRONİK
-  { cat: 'ELEKTRİK', code: '12UY0075-3', title: 'ELEKTRİK PANO MONTAJCISI (Sv.3)', unitCode: '', price: 9750, isParent: true },
-  { cat: 'ELEKTRİK', code: '12UY0075-4', title: 'ELEKTRİK PANO MONTAJCISI (Sv.4)', unitCode: '', price: 10500, isParent: true },
-  { cat: 'ELEKTRİK', code: '12UY0075-5', title: 'ELEKTRİK PANO MONTAJCISI (Sv.5)', unitCode: '', price: 12750, isParent: true },
-  
-  { cat: 'ELEKTRİK', code: '15UY0241-3', title: 'ELEKTRİK TESİSATÇISI (Sv.3)', unitCode: '', price: 11250, isParent: true },
-  
-  { cat: 'ELEKTRİK', code: '15UY0241-4', title: 'ELEKTRİK TESİSATÇISI (Sv.4) - Tüm Birimler', unitCode: '', price: 12000, isParent: true },
-  { cat: 'ELEKTRİK', code: '15UY0241-4', title: 'ELEKTRİK TESİSATÇISI (Sv.4) (B1 - Elektrik İç Tesisat Projesi Hazırlama)', unitCode: 'B1', price: 12000, isParent: false },
-  { cat: 'ELEKTRİK', code: '15UY0241-4', title: 'ELEKTRİK TESİSATÇISI (Sv.4) (B2 - Elektrik İç Tesisat Uygulaması)', unitCode: 'B2', price: 12000, isParent: false },
-  
-  { cat: 'ELEKTRİK', code: '17UY0288-5', title: 'ELEKTRİK TESİSATÇISI (Sv.5) - Tüm Birimler', unitCode: '', price: 17250, isParent: true },
-  { cat: 'ELEKTRİK', code: '17UY0288-5', title: 'ELEKTRİK TESİSATÇISI (Sv.5) (B1 - El. Tesisatı Döşeme, Fonk., Bakım Onarım)', unitCode: 'B1', price: 9900, isParent: false },
-  { cat: 'ELEKTRİK', code: '17UY0288-5', title: 'ELEKTRİK TESİSATÇISI (Sv.5) (B2 - Elektrik Tesisat Projelerini Hazırlama)', unitCode: 'B2', price: 10650, isParent: false },
-  
-  { cat: 'ELEKTRİK', code: '15UY0206-3', title: 'ELEKTRO-MEKANİK MONTAJ İŞÇİSİ (Sv.3)', unitCode: '', price: 13500, isParent: true },
-  { cat: 'ELEKTRİK', code: '15UY0206-4', title: 'ELEKTRO-MEKANİK MONTAJ İŞÇİSİ (Sv.4)', unitCode: '', price: 15000, isParent: true },
-  
-  { cat: 'ELEKTRİK', code: '16UY0264-4', title: 'ELEKTRONİK VE ELEKTRİKLİ ÜRÜNLER SERVİSÇİSİ (Tüm Birimler)', unitCode: '', price: 10500, isParent: true },
-  { cat: 'ELEKTRİK', code: '16UY0264-4', title: 'ELEKTRONİK VE ELEKTRİKLİ ÜRÜNLER SERVİSÇİSİ (B1 - Soğutucuların Servis İşlemleri)', unitCode: 'B1', price: 10500, isParent: false },
-  { cat: 'ELEKTRİK', code: '16UY0264-4', title: 'ELEKTRONİK VE ELEKTRİKLİ ÜRÜNLER SERVİSÇİSİ (B2 - Temizleyici ve Yıkayıcıların Servis İşlemleri)', unitCode: 'B2', price: 10500, isParent: false },
-  { cat: 'ELEKTRİK', code: '16UY0264-4', title: 'ELEKTRONİK VE ELEKTRİKLİ ÜRÜNLER SERVİSÇİSİ (B3 - Isıtıcı ve Pişiricilerin Servis İşlemleri)', unitCode: 'B3', price: 10500, isParent: false },
-  { cat: 'ELEKTRİK', code: '16UY0264-4', title: 'ELEKTRONİK VE ELEKTRİKLİ ÜRÜNLER SERVİSÇİSİ (B4 - Küçük Ev Aletleri Servis İşlemleri)', unitCode: 'B4', price: 10500, isParent: false },
-  { cat: 'ELEKTRİK', code: '16UY0264-4', title: 'ELEKTRONİK VE ELEKTRİKLİ ÜRÜNLER SERVİSÇİSİ (B5 - Klimaların Servis İşlemleri)', unitCode: 'B5', price: 10500, isParent: false },
-  
-  { cat: 'ELEKTRİK', code: '13UY0121-5', title: 'İŞLETME ELEKTRİK BAKIMCISI (Tüm Birimler)', unitCode: '', price: 11250, isParent: true },
-  { cat: 'ELEKTRİK', code: '13UY0121-5', title: 'İŞLETME ELEKTRİK BAKIMCISI (B1 - AG Tesislerinde Bakım Onarım)', unitCode: 'B1', price: 11250, isParent: false },
-  { cat: 'ELEKTRİK', code: '13UY0121-5', title: 'İŞLETME ELEKTRİK BAKIMCISI (B2 - Kurulum Yer Değiştirme ve Söküm)', unitCode: 'B2', price: 11250, isParent: false },
-  
-  { cat: 'ELEKTRİK', code: '12UY0076-4', title: 'OTOMASYON SİSTEMLERİ MONTAJCISI', unitCode: '', price: 9750, isParent: true },
-
-  // MAKİNE BAKIM & MONTAJ
-  { cat: 'MAKİNE', code: '10UY0002-3', title: 'MAKİNE BAKIMCI (Sv.3) - Tüm Birimler', unitCode: '', price: 10500, isParent: true },
-  { cat: 'MAKİNE', code: '10UY0002-3', title: 'MAKİNE BAKIMCI (Sv.3) (B1 - Önleyici Bakım)', unitCode: 'B1', price: 10500, isParent: false },
-  { cat: 'MAKİNE', code: '10UY0002-3', title: 'MAKİNE BAKIMCI (Sv.3) (B2 - Düzeltici Bakım)', unitCode: 'B2', price: 10500, isParent: false },
-  
-  { cat: 'MAKİNE', code: '10UY0002-4', title: 'MAKİNE BAKIMCI (Sv.4) - Tüm Birimler', unitCode: '', price: 11250, isParent: true },
-  { cat: 'MAKİNE', code: '10UY0002-4', title: 'MAKİNE BAKIMCI (Sv.4) (B1 - Önleyici Bakım)', unitCode: 'B1', price: 11250, isParent: false },
-  { cat: 'MAKİNE', code: '10UY0002-4', title: 'MAKİNE BAKIMCI (Sv.4) (B2 - Düzeltici Bakım)', unitCode: 'B2', price: 12000, isParent: false },
-  
-  { cat: 'MAKİNE', code: '12UY0105-3', title: 'MAKİNE MONTAJCISI (Sv.3)', unitCode: '', price: 13500, isParent: true },
-  { cat: 'MAKİNE', code: '12UY0105-4', title: 'MAKİNE MONTAJCISI (Sv.4)', unitCode: '', price: 15000, isParent: true },
-
-  // ULAŞTIRMA, LOJİSTİK & VİNÇ
-  { cat: 'ULAŞTIRMA', code: '13UY0145-3', title: 'ENDÜSTRİYEL TAŞIMACI (Tüm Birimler)', unitCode: '', price: 10500, isParent: true },
-  { cat: 'ULAŞTIRMA', code: '13UY0145-3', title: 'ENDÜSTRİYEL TAŞIMACI (B1 - Endüstriyel Forklift Kullanımı)', unitCode: 'B1', price: 10500, isParent: false },
-  { cat: 'ULAŞTIRMA', code: '13UY0145-3', title: 'ENDÜSTRİYEL TAŞIMACI (B2 - Endüstriyel Elektrikli Transpalet Kullanımı)', unitCode: 'B2', price: 10500, isParent: false },
-  { cat: 'ULAŞTIRMA', code: '13UY0145-3', title: 'ENDÜSTRİYEL TAŞIMACI (B3 - Endüstriyel Elektrikli İstif Mak. Kullanımı)', unitCode: 'B3', price: 10500, isParent: false },
-  { cat: 'ULAŞTIRMA', code: '13UY0145-3', title: 'ENDÜSTRİYEL TAŞIMACI (B4 - Endüstriyel Çekici Kullanımı)', unitCode: 'B4', price: 10500, isParent: false },
-  { cat: 'ULAŞTIRMA', code: '13UY0145-3', title: 'ENDÜSTRİYEL TAŞIMACI (B5 - Sapancılık)', unitCode: 'B5', price: 10500, isParent: false },
-  
-  { cat: 'ULAŞTIRMA', code: '17UY0326-3', title: 'KAMYON ŞOFÖRÜ', unitCode: '', price: 8400, isParent: true },
-  { cat: 'ULAŞTIRMA', code: '15UY0205-3', title: 'KÖPRÜLÜ VİNÇ OPERATÖRÜ', unitCode: '', price: 10500, isParent: true },
-  { cat: 'ULAŞTIRMA', code: '17UY0327-3', title: 'MİNİBÜS ŞOFÖRÜ', unitCode: '', price: 12000, isParent: true },
-  { cat: 'ULAŞTIRMA', code: '19UY0390-3', title: 'MOTOSİKLETLİ KURYE', unitCode: '', price: 10500, isParent: true },
-  { cat: 'ULAŞTIRMA', code: '17UY0328-3', title: 'SERVİS ARACI ŞOFÖRÜ', unitCode: '', price: 12000, isParent: true },
-  { cat: 'ULAŞTIRMA', code: '17UY0329-3', title: 'ŞEHİR İÇİ TOPLU TAŞIMA OTOBÜS ŞOFÖRÜ', unitCode: '', price: 12000, isParent: true },
-  { cat: 'ULAŞTIRMA', code: '17UY0330-3', title: 'TAKSİ ŞOFÖRÜ', unitCode: '', price: 12000, isParent: true },
-  
-  { cat: 'ULAŞTIRMA', code: '17UY0331-3', title: 'TEHLİKELİ MADDE TAŞIMACILIĞI ŞOFÖRÜ (Tüm Birimler)', unitCode: '', price: 13950, isParent: true },
-  { cat: 'ULAŞTIRMA', code: '17UY0331-3', title: 'TEHLİKELİ MADDE TAŞIMACILIĞI ŞOFÖRÜ (B1 - Patlayıcı Madde Ambalaj/Paket Taşıma)', unitCode: 'B1', price: 7275, isParent: false },
-
-  // TİCARET & SATIŞ
-  { cat: 'TİCARET', code: '17UY0296-3', title: 'KASİYER', unitCode: '', price: 8550, isParent: true },
-  { cat: 'TİCARET', code: '17UY0297-5', title: 'MAĞAZA SATIŞ ALANI GELİŞTİRME SORUMLUSU', unitCode: '', price: 11700, isParent: true },
-  { cat: 'TİCARET', code: '17UY0323-3', title: 'SATIŞ DANIŞMANI (Sv.3)', unitCode: '', price: 7800, isParent: true },
-  { cat: 'TİCARET', code: '17UY0323-4', title: 'SATIŞ DANIŞMANI (Sv.4)', unitCode: '', price: 9750, isParent: true },
-];
-
 const IS_MAKINESI_ITEMS = [
   { subcategory: 'forklift', code: 'ISMK-001', title: 'Forklift Operatörlük Eğitimi ve Belgesi', price: 0 },
   { subcategory: 'personelyukyukseltici', code: 'ISMK-002', title: 'Personel ve Yük Yükseltici Operatörlük Eğitimi ve Belgesi', price: 0 },
@@ -469,16 +338,6 @@ const generateCatalog = () => {
     'ULAŞTIRMA': 'myk_lonca_ulastirma'
   };
 
-  // POLY - Kategori mapping: CSV kategorisi → subcategory ID
-  const polyCatMap = {
-    'İNŞAAT': 'poly_insaat',
-    'METAL': 'poly_metal',
-    'ELEKTRİK': 'poly_elektrik',
-    'MAKİNE': 'poly_makine',
-    'ULAŞTIRMA': 'poly_ulastirma',
-    'TİCARET': 'poly_ticaret'
-  };
-
   // LONCA items
   const loncaItems = LONCA_ITEMS.map((item, idx) => ({
     id: `LONCA-${idx + 1}`,
@@ -497,25 +356,6 @@ const generateCatalog = () => {
     parentCode: (!item.isParent && item.unitCode) ? item.code : null
   }));
 
-  // POLY items
-  const polyItems = POLY_ITEMS.map((item, idx) => ({
-    id: `POLY-${idx + 1}`,
-    category: 'poly',
-    subcategory: polyCatMap[item.cat] || 'poly_ticaret',
-    code: item.code,
-    title: item.title,
-    basePrice: item.price,
-    taxRate: 20,
-    unit: 'KİŞİ',
-    description: 'Poly Cert Belgelendirme — MYK Yetkili Sınav ve Belgelendirme Ücreti (KDV Dahil)',
-    // Parent-child metadata
-    isParent: item.isParent,
-    isChild: !item.isParent && item.unitCode !== '',
-    unitCode: item.unitCode || null,
-    parentCode: (!item.isParent && item.unitCode) ? item.code : null
-  }));
-
-  // İş Makineleri items
   const isMakinesiItems = IS_MAKINESI_ITEMS.map((item, idx) => ({
     id: `ISMK-${idx + 1}`,
     category: 'ismakineleri',
@@ -532,7 +372,7 @@ const generateCatalog = () => {
     parentCode: null
   }));
 
-  return [...isMakinesiItems, ...loncaItems, ...polyItems];
+  return [...isMakinesiItems, ...loncaItems];
 };
 
 export const INITIAL_CATALOG = generateCatalog();

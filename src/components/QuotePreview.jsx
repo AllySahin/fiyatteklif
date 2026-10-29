@@ -1,19 +1,14 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { ArrowLeft, Download, Mail, Share2, CheckCircle, Edit3, Send, X, Copy, FileText, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Edit3, Plus, Trash2, X } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
-export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBack }) {
+export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onEditQuote, onBack }) {
   const [isExporting, setIsExporting] = useState(false);
-  const [isSavingQuote, setIsSavingQuote] = useState(false);
-  const [isSendingMail, setIsSendingMail] = useState(false);
-  const [showMailModal, setShowMailModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
-  const [copied, setCopied] = useState(false);
   const pdfContainerRef = useRef(null);
 
   const { customer, items, date, validUntil, id: quoteId, category, createdByName, createdByPhone } = quoteData;
-  const isIsMakinesi = category === 'ismakineleri';
   const isMyk = category === 'myk';
 
   const mykImportantNotes = [
@@ -133,25 +128,6 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
     return Number(val).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL';
   };
 
-  const defaultMailSubject = `Fiyat Teklifi - ${quoteId} - ${customer.companyName}`;
-  const defaultMailBody = `Sayın Yetkili (${customer.authorizedPerson || customer.companyName}),\n\nİhtiyaç duyduğunuz belgelere ait ${quoteId} numaralı fiyat teklifimiz hazırlanmıştır.\n\nGENEL TOPLAM (KDV DAHİL): ${formatTL(grandTotalWithTax)}\nGeçerlilik Tarihi: ${validUntil}\nTeklifi Düzenleyen: ${issuerName} - ${issuerPhone}\n\nDetaylı teklif formu ve evrak listesi belgede yer almaktadır.\n\nSaygılarımızla,\nVEFA EĞİTİM KURUMLARI`;
-  const [mailTo, setMailTo] = useState(customer.email || '');
-  const [mailSubjectInput, setMailSubjectInput] = useState(defaultMailSubject);
-  const [mailBodyInput, setMailBodyInput] = useState(defaultMailBody);
-  const [mailSendProgress, setMailSendProgress] = useState('');
-
-  const blobToBase64 = (blob) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = String(reader.result || '');
-        const base64 = result.includes(',') ? result.split(',')[1] : result;
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
   const buildPdfBlob = async () => {
     console.log(`[PDF] Oluşturma başladı - Kategori: ${isMyk ? 'MYK (2 sayfa)' : 'İş Makineleri (1 sayfa)'}, Teklif: ${quoteId}`);
     const startTime = Date.now();
@@ -252,13 +228,6 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
     return blob;
   };
 
-  const generatePdfBlobForMail = async () => await buildPdfBlob();
-
-  const generatePdfBase64ForCurrentQuote = async () => {
-    const pdfBlob = await buildPdfBlob();
-    return await blobToBase64(pdfBlob);
-  };
-
   // Document array handlers
   const handleAddDocument = () => {
     setRegistrationDocuments(prev => [...prev, 'YENİ EVRAK TANIMI']);
@@ -285,171 +254,24 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
       const company = getCompanySlug();
       const pdfBlob = await buildPdfBlob();
       const fileName = `Teklif_${quoteId}_${company}.pdf`;
+      await onSaveQuote({
+        finalTotal: grandTotalWithTax,
+        pdfFileName: fileName,
+        downloadedAt: new Date().toISOString()
+      });
       const blobUrl = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = fileName;
       link.click();
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (err) {
-      console.error('PDF indirme hatası:', err);
+      console.error('PDF indirme veya teklif kaydetme hatası:', err);
       const errorDetail = err?.message || err?.toString() || 'Detay yok';
-      alert(`PDF oluşturulamadı.\n\nHata: ${errorDetail}\n\nKonsolda daha fazla detay var (F12)`);
+      alert(`Teklif kaydedilemedi veya PDF oluşturulamadı.\n\nHata: ${errorDetail}\n\nKonsolda daha fazla detay var (F12)`);
     } finally {
       setIsExporting(false);
     }
-  };
-
-  // WhatsApp Share
-  const handleWhatsAppShare = () => {
-    const text = `Sayın ${customer.authorizedPerson || customer.companyName},\n\n${category === 'myk' ? 'Lonca MYK Belgelendirme' : 'İş Makineleri Operatörlük'} fiyat teklifimiz ekte hazırlanmıştır.\nTeklif No: ${quoteId}\nToplam Tutar: ${formatTL(grandTotalWithTax)}\nGeçerlilik Tarihi: ${validUntil}\nİlgili Yetkili: ${issuerName} (${issuerPhone})\n\nDetaylı bilgi için bizimle iletişime geçebilirsiniz.`;
-    const cleanPhone = (customer.phone || '').replace(/\D/g, '');
-    const url = cleanPhone ? `https://wa.me/90${cleanPhone}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  };
-
-  const handleSendMailWithAttachment = async () => {
-    if (!mailTo.trim()) {
-      alert('Lutfen alici mail adresini girin.');
-      return;
-    }
-
-    setIsSendingMail(true);
-    setMailSendProgress('PDF oluşturuluyor...');
-
-    try {
-      console.log('[Mail] PDF oluşturma başlıyor...');
-      const fileName = quoteData?.pdfFileName || `Teklif_${quoteId}_${getCompanySlug()}.pdf`;
-      
-      let pdfBase64;
-      try {
-        pdfBase64 = quoteData?.pdfBase64 || await generatePdfBase64ForCurrentQuote();
-        console.log(`[Mail] PDF başarıyla oluşturuldu, boyut: ${(pdfBase64.length / 1024).toFixed(2)} KB`);
-        setMailSendProgress('Mail gönderiliyor...');
-      } catch (pdfError) {
-        console.error('[Mail] PDF oluşturma hatası:', pdfError);
-        throw new Error(`PDF oluşturulamadı: ${pdfError.message}`);
-      }
-      
-      // Production: use Nginx proxy (/api/), Development: use port 8787
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const apiBase = String(
-        currentUser?.smtpApiBaseUrl || 
-        (isLocalhost ? `${window.location.protocol}//${window.location.hostname}:8787` : window.location.origin)
-      ).replace(/\/$/, '');
-
-      const payload = {
-        to: mailTo.trim(),
-        subject: mailSubjectInput,
-        text: mailBodyInput,
-        attachment: {
-          filename: fileName,
-          contentBase64: pdfBase64,
-          contentType: 'application/pdf'
-        }
-      };
-
-      const apiBases = [apiBase];
-      if (!currentUser?.smtpApiBaseUrl) {
-        const proto = window.location.protocol;
-        if (window.location.hostname === 'localhost') {
-          apiBases.push(`${proto}//127.0.0.1:8787`);
-        } else if (window.location.hostname === '127.0.0.1') {
-          apiBases.push(`${proto}//localhost:8787`);
-        }
-      }
-
-      let resp;
-      let lastFetchError;
-      console.log(`[Mail] API isteği gönderiliyor: ${apiBases[0]}/api/send-quote-email`);
-      for (const base of apiBases) {
-        try {
-          resp = await fetch(`${base}/api/send-quote-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          console.log(`[Mail] API yanıtı alındı, status: ${resp.status}`);
-          break;
-        } catch (fetchErr) {
-          console.error(`[Mail] API isteği başarısız (${base}):`, fetchErr);
-          lastFetchError = fetchErr;
-        }
-      }
-
-      if (!resp) {
-        throw new Error(`Mail API baglantisi kurulamadı (8787). Mail server'i calistirin: npm run mail-server. ${lastFetchError?.message || ''}`.trim());
-      }
-
-      const data = await resp.json().catch(() => ({}));
-
-      if (!resp.ok) {
-        console.error('[Mail] Server hatası:', data);
-        throw new Error(data?.error || 'Mail gonderilemedi.');
-      }
-
-      console.log('[Mail] Başarıyla gönderildi, teklif kaydediliyor...');
-      setMailSendProgress('Teklif kaydediliyor...');
-      
-      // Mail başarılı - şimdi teklifi otomatik kaydet
-      try {
-        await onSaveQuote({
-          finalTotal: grandTotalWithTax,
-          pdfBase64: pdfBase64,
-          pdfFileName: fileName
-        });
-        console.log('[Kayıt] Teklif başarıyla kaydedildi');
-        setMailSendProgress('Tamamlandı! ✅');
-        setTimeout(() => {
-          alert('✅ Mail başarıyla gönderildi ve teklif kaydedildi!');
-        }, 300);
-      } catch (saveErr) {
-        console.error('[Kayıt] Teklif kaydedilemedi:', saveErr);
-        alert('⚠️ Mail gönderildi ancak teklif kaydedilemedi.\n\nLütfen "Teklifi Kaydet ve Bitir" butonuna basın.');
-      }
-      
-      setShowMailModal(false);
-    } catch (err) {
-      console.error('[Mail] Genel hata:', err);
-      const errorDetail = err?.message || err?.toString() || JSON.stringify(err);
-      const categoryInfo = isMyk ? 'MYK (2 sayfa)' : 'İş Makineleri (1 sayfa)';
-      alert(`❌ Mail gönderilemedi!\n\nKategori: ${categoryInfo}\nTeklif: ${quoteId}\n\nHata: ${errorDetail}\n\nMail server çalışıyor mu? Konsolu kontrol edin (F12)`);
-    } finally {
-      setIsSendingMail(false);
-      setMailSendProgress('');
-    }
-  };
-
-  const handleSaveQuoteWithPdf = async () => {
-    setIsSavingQuote(true);
-
-    try {
-      const pdfBase64 = await generatePdfBase64ForCurrentQuote();
-      const fileName = `Teklif_${quoteId}_${getCompanySlug()}.pdf`;
-      await onSaveQuote({
-        finalTotal: grandTotalWithTax,
-        pdfBase64,
-        pdfFileName: fileName
-      });
-    } catch (err) {
-      console.error('Teklif kaydetme hatasi:', err);
-      const errorDetail = err?.message || err?.toString() || JSON.stringify(err);
-      alert(`Teklif kaydedilemedi.\n\nHata: ${errorDetail}\n\nKonsolda daha fazla detay var (F12)`);
-    } finally {
-      setIsSavingQuote(false);
-    }
-  };
-
-  const handleOpenMailModal = () => {
-    // Mail modalı açılırken müşteri email'ini güncelle
-    setMailTo(customer.email || '');
-    setShowMailModal(true);
-  };
-
-  const handleCopyMailText = () => {
-    navigator.clipboard.writeText(`Konu: ${mailSubjectInput}\n\n${mailBodyInput}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -465,6 +287,15 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
           </button>
           
           <div className="flex items-center gap-2">
+            {onEditQuote && (
+              <button
+                onClick={() => onEditQuote(quoteData)}
+                className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-3 py-1.5 rounded-full flex items-center gap-1 shadow active-tap"
+              >
+                <Edit3 size={13} />
+                <span>Teklifi Düzenle</span>
+              </button>
+            )}
             <button
               onClick={() => setShowTermsModal(true)}
               className="bg-amber-400 hover:bg-amber-500 text-[#1b365d] font-bold text-xs px-3 py-1.5 rounded-full flex items-center gap-1 shadow active-tap"
@@ -476,40 +307,18 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
         </div>
         
         <h1 className="text-xl font-bold">Teklif Belgesi Hazır</h1>
-        <p className="text-xs text-blue-200 mt-0.5">İster PDF indirin, ister metinleri düzenleyin.</p>
+        <p className="text-xs text-blue-200 mt-0.5">Teklifiniz otomatik kaydedildi. PDF indirebilir veya düzenleyebilirsiniz.</p>
       </div>
 
       {/* Action Buttons Toolbar */}
-      <div className="px-5 pt-4 grid grid-cols-4 gap-1.5 no-print">
+      <div className="px-5 pt-4 grid grid-cols-1 gap-1.5 no-print">
         <button
           onClick={handleDownloadPDF}
           disabled={isExporting}
           className="flex flex-col items-center justify-center p-2.5 bg-white border border-slate-200 rounded-2xl text-slate-800 font-bold text-[11px] shadow-sm hover:border-[#1b365d] active-tap"
         >
           <Download size={18} className="text-[#ff6b00] mb-1" />
-          <span>{isExporting ? 'Bekleyin...' : 'PDF İndir'}</span>
-        </button>
-        <button
-          onClick={handleOpenMailModal}
-          className="flex flex-col items-center justify-center p-2.5 bg-white border border-slate-200 rounded-2xl text-slate-800 font-bold text-[11px] shadow-sm hover:border-[#1b365d] active-tap"
-        >
-          <Mail size={18} className="text-[#ff6b00] mb-1" />
-          <span>Mail Gönder</span>
-        </button>
-        <button
-          onClick={handleWhatsAppShare}
-          className="flex flex-col items-center justify-center p-2.5 bg-white border border-slate-200 rounded-2xl text-slate-800 font-bold text-[11px] shadow-sm hover:border-[#1b365d] active-tap"
-        >
-          <Share2 size={18} className="text-[#ff6b00] mb-1" />
-          <span>WhatsApp</span>
-        </button>
-        <button
-          onClick={handleSaveQuoteWithPdf}
-          disabled={isSavingQuote}
-          className="flex flex-col items-center justify-center p-2.5 bg-[#1b365d] text-white rounded-2xl font-bold text-[11px] shadow-sm active-tap"
-        >
-          <CheckCircle size={18} className="mb-1" />
-          <span>{isSavingQuote ? 'Kaydediliyor...' : 'Kaydet'}</span>
+          <span>{isExporting ? 'PDF hazırlanıyor...' : 'PDF İndir (Teklifi Kaydet)'}</span>
         </button>
       </div>
 
@@ -950,70 +759,6 @@ export default function QuotePreview({ quoteData, currentUser, onSaveQuote, onBa
         </div>
       )}
 
-      {/* Email Sender Modal */}
-      {showMailModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print">
-          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-slate-800 text-lg">E-Posta İle Gönder</h3>
-              <button onClick={() => setShowMailModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs mb-4">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Alıcı E-Posta:</label>
-                <input 
-                  type="email" 
-                  value={mailTo}
-                  onChange={(e) => setMailTo(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Konu:</label>
-                <input 
-                  type="text" 
-                  value={mailSubjectInput}
-                  onChange={(e) => setMailSubjectInput(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Mesaj İçeriği:</label>
-                <textarea 
-                  rows={5} 
-                  value={mailBodyInput}
-                  onChange={(e) => setMailBodyInput(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 font-mono text-[11px]"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={handleCopyMailText}
-                className="flex-1 py-2.5 border border-slate-300 rounded-xl font-bold text-xs text-slate-700 flex items-center justify-center gap-1 active-tap"
-              >
-                <Copy size={14} />
-                <span>{copied ? 'Kopyalandı!' : 'Kopyala'}</span>
-              </button>
-              
-              <button
-                onClick={handleSendMailWithAttachment}
-                disabled={isSendingMail}
-                className="flex-1 py-2.5 bg-[#ff6b00] disabled:opacity-60 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow active-tap"
-              >
-                <Send size={14} />
-                <span>{isSendingMail ? (mailSendProgress || 'Gönderiliyor...') : 'Mail Gönder (PDF Ekli)'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

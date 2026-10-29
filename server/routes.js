@@ -1,7 +1,115 @@
 import express from 'express';
 import { getDb } from './db.js';
+import { INITIAL_CATALOG } from '../src/data/catalogData.js';
 
 const router = express.Router();
+
+const seedCatalog = async (db) => {
+  const existing = await db.getAsync('SELECT COUNT(*) AS count FROM CatalogItems');
+  if (existing.count > 0) return;
+
+  for (const item of INITIAL_CATALOG) {
+    await db.runAsync(
+      'INSERT OR IGNORE INTO CatalogItems (Id, ItemJson) VALUES (?, ?)',
+      [item.id, JSON.stringify(item)]
+    );
+  }
+};
+
+// ============================================
+// SHARED CATALOG API
+// ============================================
+
+router.get('/catalog', async (_req, res) => {
+  try {
+    const db = getDb();
+    await seedCatalog(db);
+    const rows = await db.allAsync('SELECT ItemJson FROM CatalogItems ORDER BY rowid');
+    const items = rows.map(row => JSON.parse(row.ItemJson));
+    return res.json({ ok: true, data: items });
+  } catch (err) {
+    console.error('Katalog listesi hatası:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/catalog', async (req, res) => {
+  try {
+    const item = req.body;
+    if (
+      typeof item?.id !== 'string' ||
+      typeof item?.title !== 'string' ||
+      !item.title.trim() ||
+      typeof item?.code !== 'string' ||
+      !item.code.trim() ||
+      !['ismakineleri', 'myk'].includes(item.category) ||
+      !Number.isFinite(Number(item.basePrice)) ||
+      Number(item.basePrice) <= 0
+    ) {
+      return res.status(400).json({ error: 'Geçerli kalem adı, kodu, kategorisi ve fiyatı zorunlu.' });
+    }
+
+    const db = getDb();
+    const result = await db.runAsync(
+      'INSERT OR IGNORE INTO CatalogItems (Id, ItemJson) VALUES (?, ?)',
+      [item.id, JSON.stringify(item)]
+    );
+    if (result.changes === 0) {
+      return res.status(409).json({ error: 'Bu kalem kimliği katalogda zaten mevcut.' });
+    }
+    return res.status(201).json({ ok: true, data: item });
+  } catch (err) {
+    console.error('Kataloğa kalem ekleme hatası:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/catalog/:itemId/price', async (req, res) => {
+  try {
+    const price = Number(req.body?.basePrice);
+    if (!Number.isFinite(price) || price <= 0) {
+      return res.status(400).json({ error: 'Geçerli bir fiyat girin.' });
+    }
+
+    const db = getDb();
+    const row = await db.getAsync('SELECT ItemJson FROM CatalogItems WHERE Id = ?', [req.params.itemId]);
+    if (!row) return res.status(404).json({ error: 'Katalog kalemi bulunamadı.' });
+
+    const item = { ...JSON.parse(row.ItemJson), basePrice: price };
+    await db.runAsync(
+      'UPDATE CatalogItems SET ItemJson = ?, UpdatedAt = CURRENT_TIMESTAMP WHERE Id = ?',
+      [JSON.stringify(item), req.params.itemId]
+    );
+    return res.json({ ok: true, data: item });
+  } catch (err) {
+    console.error('Katalog fiyatı güncelleme hatası:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/catalog/reset', async (_req, res) => {
+  try {
+    const db = getDb();
+    await db.execAsync('BEGIN IMMEDIATE TRANSACTION');
+    await db.runAsync('DELETE FROM CatalogItems');
+    for (const item of INITIAL_CATALOG) {
+      await db.runAsync(
+        'INSERT INTO CatalogItems (Id, ItemJson) VALUES (?, ?)',
+        [item.id, JSON.stringify(item)]
+      );
+    }
+    await db.execAsync('COMMIT');
+    return res.json({ ok: true, data: INITIAL_CATALOG });
+  } catch (err) {
+    try {
+      await getDb().execAsync('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('Katalog sıfırlama işlemi geri alınamadı:', rollbackError);
+    }
+    console.error('Katalog sıfırlama hatası:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 // ============================================
 // CUSTOMERS API
@@ -102,6 +210,10 @@ router.post('/quotes', async (req, res) => {
     
     if (!quoteId || !date) {
       return res.status(400).json({ error: 'QuoteId ve Date zorunlu.' });
+    }
+    if (String(category || '').toLowerCase() === 'poly' ||
+      (Array.isArray(items) && items.some(item => String(item?.category || '').toLowerCase() === 'poly'))) {
+      return res.status(400).json({ error: 'Poly Cert kalemleri artık kullanılamıyor.' });
     }
     
     const db = getDb();
