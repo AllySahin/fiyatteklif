@@ -1,3 +1,9 @@
+# Yerel Geliştirme
+
+Bağımlılıkları kurduktan sonra `npm run dev` komutu API sunucusunu ve Vite arayüzünü birlikte başlatır. Uygulama Vite'ın gösterdiği yerel adresten açılır. Durdurmak için terminalde `Ctrl+C` kullanın.
+
+E-posta gönderimi için `.env` dosyasında SMTP ayarları gerekir; bu ayarlar olmadan da API ve katalog çalışır.
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.

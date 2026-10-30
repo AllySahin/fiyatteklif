@@ -22,10 +22,8 @@ const SMTP_PASS = process.env.EMAIL_PASSWORD;
 const SMTP_SECURE = SMTP_PORT === 465;
 const SMTP_FROM = process.env.EMAIL_FROM || SMTP_USER;
 
-// Validate required environment variables
 if (!SMTP_USER || !SMTP_PASS) {
-  console.error('ERROR: EMAIL_ADDRESS and EMAIL_PASSWORD must be set in .env file');
-  process.exit(1);
+  console.warn('SMTP ayarlari eksik. API calismaya devam edecek ancak e-posta gonderimi kullanilamayacak.');
 }
 
 const createTransportConfigs = () => {
